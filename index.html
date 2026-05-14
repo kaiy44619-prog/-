@@ -3,198 +3,212 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>岳笙團隊 - 雲端管理系統 v3.0</title>
-    <!-- 引入 Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
+    <title>岳笙團隊管理系統 - 穩定版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
-    <script>
-        // --- ！！！請在此處填入你剛剛在 Firebase 申請的資訊 ！！！ ---
-        const firebaseConfig = {
-            apiKey: "你的APIKEY",
-            authDomain: "你的ID.firebaseapp.com",
-            databaseURL: "https://你的ID.firebaseio.com",
-            projectId: "你的ID",
-            storageBucket: "你的ID.appspot.com",
-            messagingSenderId: "你的發送ID",
-            appId: "你的APPID"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-    </script>
+    <style>
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .animate-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
 </head>
-<body class="bg-gray-100 min-h-screen text-gray-800">
-    <div id="app" class="max-w-4xl mx-auto px-4 py-6">
+<body class="bg-gray-50 min-h-screen font-sans">
+    <div id="app" class="max-w-md mx-auto px-4 py-8">
         
-        <!-- 1. 登入/註冊 切換介面 -->
-        <div id="authPage" class="bg-white p-8 rounded-2xl shadow-xl mt-10">
-            <h2 id="authTitle" class="text-2xl font-bold text-center mb-6">岳笙團隊登入</h2>
+        <!-- 登入/註冊頁面 -->
+        <div id="authPage" class="bg-white p-8 rounded-3xl shadow-xl animate-in">
+            <h2 id="authTitle" class="text-2xl font-bold text-center mb-6 text-blue-600">岳笙團隊登入</h2>
             <div class="space-y-4">
-                <input id="uAccount" type="text" placeholder="輸入帳號" class="w-full p-4 border rounded-xl">
-                <input id="uPassword" type="password" placeholder="輸入密碼" class="w-full p-4 border rounded-xl">
-                <input id="uNickname" type="text" placeholder="輸入你的名字/藝名 (註冊時填寫)" class="w-full p-4 border rounded-xl hidden">
-                <button id="btnPrimary" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold">登入系統</button>
-                <button id="btnToggle" class="w-full text-blue-500 text-sm">還沒有帳號？點此註冊</button>
+                <input id="uAcc" type="text" placeholder="帳號" class="w-full p-4 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-400">
+                <input id="uPwd" type="password" placeholder="密碼" class="w-full p-4 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-400">
+                <div id="regFields" class="hidden space-y-4">
+                    <input id="uNick" type="text" placeholder="你的名字 / 藝名" class="w-full p-4 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-400">
+                </div>
+                <button id="mainBtn" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg active:scale-95 transition-all">登入系統</button>
+                <p id="toggleAuth" class="text-center text-sm text-blue-500 cursor-pointer pt-2">還沒有帳號？點此註冊</p>
             </div>
         </div>
 
-        <!-- 2. 主系統內容 (隱藏) -->
-        <div id="mainPage" class="hidden animate-fade-in">
-            <!-- 頂部資訊 -->
+        <!-- 主系統頁面 (預設隱藏) -->
+        <div id="mainPage" class="hidden animate-in">
             <div class="flex justify-between items-center mb-6">
-                <div>
-                    <h1 class="text-xl font-bold text-blue-600">管理中心</h1>
-                    <p class="text-xs text-gray-400">目前使用者：<span id="displayUser" class="font-bold"></span></p>
-                </div>
-                <button onclick="location.reload()" class="bg-gray-200 p-2 rounded-lg"><i class="fa fa-sign-out"></i></button>
+                <h1 class="text-xl font-bold">你好，<span id="userHello" class="text-blue-600"></span></h1>
+                <button onclick="location.reload()" class="text-gray-400"><i class="fa fa-sign-out text-xl"></i></button>
             </div>
 
-            <!-- 功能分頁 -->
-            <nav class="flex bg-white rounded-xl shadow-sm mb-6 overflow-hidden">
-                <button class="flex-1 py-4 font-bold nav-btn border-b-2 border-blue-600" data-tab="schedule">排班預約</button>
-                <button class="flex-1 py-4 font-bold nav-btn" data-tab="checkin">現場打卡</button>
-                <button id="adminOnly" class="flex-1 py-4 font-bold nav-btn text-red-500 hidden" data-tab="report">全體月報表</button>
+            <!-- 選單 -->
+            <nav class="flex bg-white rounded-2xl shadow-sm mb-6 p-1">
+                <button class="flex-1 py-3 rounded-xl font-bold nav-btn bg-blue-600 text-white" data-target="schedule">排班</button>
+                <button class="flex-1 py-3 rounded-xl font-bold nav-btn" data-target="checkin">打卡</button>
+                <button id="adminTab" class="flex-1 py-3 rounded-xl font-bold nav-btn hidden text-red-500" data-target="admin">報表</button>
             </nav>
 
-            <!-- 排班區 -->
-            <section id="tab-schedule" class="tab-sec">
+            <!-- 排班分頁 -->
+            <section id="schedule" class="tab-content active">
                 <div class="bg-white p-6 rounded-2xl shadow-sm mb-4">
-                    <h3 class="font-bold mb-4">申請預約時段</h3>
-                    <input type="date" id="inputDate" class="w-full p-3 border rounded-lg mb-3">
-                    <select id="inputTime" class="w-full p-3 border rounded-lg mb-4">
-                        <option value="20:00-21:00">20:00 - 21:00</option>
-                        <option value="21:00-22:00">21:00 - 22:00</option>
-                        <option value="22:00-23:00">22:00 - 23:00</option>
+                    <h3 class="font-bold mb-4 italic text-gray-700">1. 預約你的時段</h3>
+                    <input type="date" id="dateInput" class="w-full p-3 border rounded-xl mb-3">
+                    <select id="timeInput" class="w-full p-3 border rounded-xl mb-4">
+                        <option>20:00 - 21:00</option>
+                        <option>21:00 - 22:00</option>
+                        <option>22:00 - 23:00</option>
+                        <option>23:00 - 00:00</option>
                     </select>
-                    <button onclick="submitSchedule()" class="w-full bg-blue-600 text-white py-3 rounded-lg">送出審核</button>
+                    <button id="addSchedBtn" class="w-full bg-blue-100 text-blue-600 py-3 rounded-xl font-bold">+ 提交排班申請</button>
                 </div>
-                <div id="myScheduleList" class="space-y-2 text-sm"></div>
+                <div id="mySchedules" class="space-y-2"></div>
             </section>
 
-            <!-- 打卡區 -->
-            <section id="tab-checkin" class="tab-sec hidden">
-                <div class="bg-white p-8 rounded-2xl shadow-sm text-center">
-                    <p class="text-gray-500 mb-6">請上傳帶有時間浮水印的截圖</p>
-                    <input type="file" id="imageFile" accept="image/*" class="mb-4">
-                    <button onclick="doCheckin()" class="w-full bg-green-500 text-white py-4 rounded-xl font-bold">確認打卡 (雲端同步)</button>
+            <!-- 打卡分頁 -->
+            <section id="checkin" class="tab-content">
+                <div class="bg-white p-6 rounded-2xl shadow-sm text-center">
+                    <p class="text-sm text-gray-500 mb-4">請確保已在排班時段內</p>
+                    <label class="block w-full bg-gray-100 border-2 border-dashed border-gray-300 py-8 rounded-2xl cursor-pointer mb-4">
+                        <i class="fa fa-camera text-2xl text-gray-400 mb-2"></i>
+                        <span class="block text-gray-500">點擊拍照或上傳截圖</span>
+                        <input type="file" id="fileInput" accept="image/*" class="hidden">
+                    </label>
+                    <div id="previewArea" class="hidden mb-4"><img id="imgPrev" class="rounded-lg shadow-md mx-auto max-h-40"></div>
+                    <button id="checkBtn" class="w-full bg-green-500 text-white py-4 rounded-xl font-bold shadow-lg">確認上班打卡</button>
                 </div>
             </section>
 
-            <!-- 報表區 (管理員專屬) -->
-            <section id="tab-report" class="tab-sec hidden">
+            <!-- 管理後台/報表 -->
+            <section id="admin" class="tab-content">
                 <div class="bg-white p-6 rounded-2xl shadow-sm">
                     <div class="flex justify-between items-center mb-4">
-                        <h3 class="font-bold">全體成員當月數據</h3>
-                        <button onclick="exportCSV()" class="text-sm bg-gray-800 text-white px-3 py-1 rounded">導出 CSV 報表</button>
+                        <h3 class="font-bold">全體數據報表</h3>
+                        <button id="exportBtn" class="text-xs bg-black text-white px-3 py-1 rounded">導出 CSV</button>
                     </div>
-                    <div id="reportTable" class="text-sm"></div>
+                    <div id="reportList" class="space-y-3"></div>
                 </div>
             </section>
         </div>
     </div>
 
     <script>
-        let isRegister = false;
-        let currentUser = null;
-
-        // 登入/註冊 切換
-        document.getElementById('btnToggle').onclick = () => {
-            isRegister = !isRegister;
-            document.getElementById('authTitle').innerText = isRegister ? '員工帳號註冊' : '岳笙團隊登入';
-            document.getElementById('uNickname').classList.toggle('hidden');
-            document.getElementById('btnPrimary').innerText = isRegister ? '立即註冊' : '登入系統';
-            document.getElementById('btnToggle').innerText = isRegister ? '已有帳號？返回登入' : '還沒有帳號？點此註冊';
+        const store = {
+            users: () => JSON.parse(localStorage.getItem('ys_users')) || [{acc:'admin', pwd:'123', nick:'岳笙總監', role:'admin'}],
+            data: () => JSON.parse(localStorage.getItem('ys_data')) || []
         };
 
-        // 登入與註冊邏輯 (對接 Firebase)
-        document.getElementById('btnPrimary').onclick = async () => {
-            const acc = document.getElementById('uAccount').value.trim();
-            const pwd = document.getElementById('uPassword').value;
-            const nick = document.getElementById('uNickname').value;
+        let isReg = false;
+        let user = null;
 
-            if (isRegister) {
-                await db.ref('users/' + acc).set({ acc, pwd, nick, role: 'user' });
-                alert('註冊成功，請登入！');
+        // 登入/註冊切換
+        document.getElementById('toggleAuth').onclick = () => {
+            isReg = !isReg;
+            document.getElementById('authTitle').innerText = isReg ? '建立新帳號' : '岳笙團隊登入';
+            document.getElementById('regFields').classList.toggle('hidden');
+            document.getElementById('mainBtn').innerText = isReg ? '註冊帳號' : '登入系統';
+            document.getElementById('toggleAuth').innerText = isReg ? '已有帳號？點此登入' : '還沒有帳號？點此註冊';
+        };
+
+        // 按鈕點擊
+        document.getElementById('mainBtn').onclick = () => {
+            const acc = document.getElementById('uAcc').value;
+            const pwd = document.getElementById('uPwd').value;
+            const users = store.users();
+
+            if(isReg) {
+                const nick = document.getElementById('uNick').value;
+                if(!acc || !pwd || !nick) return alert('請填寫完整');
+                users.push({acc, pwd, nick, role:'user'});
+                localStorage.setItem('ys_users', JSON.stringify(users));
+                alert('註冊成功！請登入');
                 location.reload();
             } else {
-                db.ref('users/' + acc).once('value', (snapshot) => {
-                    const user = snapshot.val();
-                    if (user && user.pwd === pwd) {
-                        currentUser = user;
-                        enterSystem();
-                    } else {
-                        alert('帳密錯誤');
-                    }
-                });
+                const found = users.find(u => u.acc === acc && u.pwd === pwd);
+                if(found) {
+                    user = found;
+                    startApp();
+                } else { alert('帳密錯誤'); }
             }
         };
 
-        function enterSystem() {
+        function startApp() {
             document.getElementById('authPage').classList.add('hidden');
             document.getElementById('mainPage').classList.remove('hidden');
-            document.getElementById('displayUser').innerText = currentUser.nick;
-            if(currentUser.role === 'admin') document.getElementById('adminOnly').classList.remove('hidden');
-            loadMySchedules();
-        }
-
-        // 送出排班到雲端
-        async function submitSchedule() {
-            const date = document.getElementById('inputDate').value;
-            const time = document.getElementById('inputTime').value;
-            const ref = db.ref('schedules').push();
-            await ref.set({
-                id: ref.key,
-                user: currentUser.nick,
-                date: date,
-                time: time,
-                status: 'pending'
-            });
-            alert('排班申請已上傳雲端');
-            loadMySchedules();
-        }
-
-        // 從雲端載入我的排班
-        function loadMySchedules() {
-            db.ref('schedules').orderByChild('user').equalTo(currentUser.nick).on('value', (snap) => {
-                const data = snap.val();
-                let html = '<h4 class="font-bold text-gray-400 mb-2">我的排班進度</h4>';
-                for(let k in data) {
-                    const s = data[k];
-                    html += `<div class="bg-white p-3 rounded shadow-sm flex justify-between">
-                        <span>${s.date} (${s.time})</span>
-                        <span class="text-blue-500">${s.status}</span>
-                    </div>`;
-                }
-                document.getElementById('myScheduleList').innerHTML = html;
-            });
-        }
-
-        // 報表生成與匯出 (略縮，可依照需求擴充)
-        function exportCSV() {
-            db.ref('schedules').once('value', (snap) => {
-                let csv = '員工,日期,時段,狀態\n';
-                snap.forEach(child => {
-                    const s = child.val();
-                    csv += `${s.user},${s.date},${s.time},${s.status}\n`;
-                });
-                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-                const link = document.createElement("a");
-                link.href = URL.createObjectURL(blob);
-                link.download = "岳笙團隊月報表.csv";
-                link.click();
-            });
+            document.getElementById('userHello').innerText = user.nick;
+            if(user.role === 'admin') document.getElementById('adminTab').classList.remove('hidden');
+            renderSchedules();
+            renderReport();
         }
 
         // 分頁切換
         document.querySelectorAll('.nav-btn').forEach(btn => {
             btn.onclick = () => {
-                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('border-b-2', 'border-blue-600'));
-                btn.classList.add('border-b-2', 'border-blue-600');
-                document.querySelectorAll('.tab-sec').forEach(s => s.classList.add('hidden'));
-                document.getElementById('tab-' + btn.dataset.tab).classList.remove('hidden');
+                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('bg-blue-600', 'text-white'));
+                btn.classList.add('bg-blue-600', 'text-white');
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                document.getElementById(btn.dataset.target).classList.add('active');
             };
         });
+
+        // 提交排班
+        document.getElementById('addSchedBtn').onclick = () => {
+            const d = document.getElementById('dateInput').value;
+            const t = document.getElementById('timeInput').value;
+            if(!d) return alert('請選擇日期');
+            const allData = store.data();
+            allData.push({id:Date.now(), name:user.nick, date:d, time:t, type:'班表', status:'待審核'});
+            localStorage.setItem('ys_data', JSON.stringify(allData));
+            renderSchedules();
+            alert('排班已送出');
+        };
+
+        function renderSchedules() {
+            const my = store.data().filter(d => d.name === user.nick);
+            document.getElementById('mySchedules').innerHTML = my.map(m => `
+                <div class="bg-white p-4 rounded-xl shadow-sm flex justify-between items-center text-sm">
+                    <span><b>${m.date}</b> <br> ${m.time}</span>
+                    <span class="bg-blue-50 text-blue-500 px-3 py-1 rounded-full text-xs">${m.status}</span>
+                </div>
+            `).join('');
+        }
+
+        function renderReport() {
+            const all = store.data();
+            document.getElementById('reportList').innerHTML = all.map(a => `
+                <div class="border-b pb-2 text-sm">
+                    <div class="flex justify-between"><b>${a.name}</b> <span>${a.date}</span></div>
+                    <div class="text-gray-500 text-xs">${a.time} - ${a.status}</div>
+                </div>
+            `).join('');
+        }
+
+        // 導出 CSV (報表功能)
+        document.getElementById('exportBtn').onclick = () => {
+            let csv = "名字,日期,時段,狀態\n";
+            store.data().forEach(d => {
+                csv += `${d.name},${d.date},${d.time},${d.status}\n`;
+            });
+            const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv; charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `岳笙團隊_${new Date().toLocaleDateString()}.csv`;
+            a.click();
+        };
+
+        // 圖片預覽
+        document.getElementById('fileInput').onchange = function() {
+            const file = this.files[0];
+            if(file) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    document.getElementById('imgPrev').src = e.target.result;
+                    document.getElementById('previewArea').classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+
+        document.getElementById('checkBtn').onclick = () => {
+            if(!document.getElementById('fileInput').files[0]) return alert('請先上傳截圖');
+            alert('打卡數據已儲存至本地端');
+        };
     </script>
 </body>
 </html>

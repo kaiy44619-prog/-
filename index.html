@@ -12,7 +12,7 @@
         .nav-btn.active { background-color: #2563eb; color: white; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        .record-img { max-width: 150px; border-radius: 8px; margin-top: 5px; cursor: pointer; }
+        .record-img { max-width: 150px; border-radius: 8px; margin-top: 5px; cursor: pointer; border: 1px solid #eee; }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -52,9 +52,9 @@
             <div id="adminQuickLink" class="hidden mb-4 bg-red-600 text-white p-5 rounded-2xl shadow-lg flex justify-between items-center cursor-pointer" onclick="showAdmin()">
                 <div>
                     <p class="font-bold text-lg">審核管理後台</p>
-                    <p class="text-xs opacity-80 text-white">點此查看圖片動態與審核</p>
+                    <p class="text-xs opacity-80">查閱全體成員截圖與審核</p>
                 </div>
-                <i class="fa fa-eye text-2xl"></i>
+                <i class="fa fa-camera text-2xl"></i>
             </div>
 
             <section id="schedule" class="tab-content active bg-white p-6 rounded-2xl border">
@@ -65,7 +65,7 @@
             </section>
 
             <section id="checkin" class="tab-content bg-white p-6 rounded-2xl border text-center">
-                <div id="checkinStatus" class="mb-4 p-3 rounded-xl text-xs font-bold"></div>
+                <div class="mb-4 p-3 rounded-xl text-xs font-bold bg-blue-50 text-blue-600">● 24H 打卡通道開放中</div>
                 <div class="mb-4">
                     <label class="block w-full border-2 border-dashed border-gray-300 rounded-2xl p-6 cursor-pointer hover:bg-gray-50">
                         <i class="fa fa-camera text-3xl text-gray-400 mb-2"></i>
@@ -73,7 +73,7 @@
                         <input type="file" id="imgInput" accept="image/*" class="hidden" onchange="previewImage()">
                     </label>
                 </div>
-                <button id="checkBtn" onclick="handleImageCheckin()" class="w-full bg-green-500 text-white py-4 rounded-xl font-bold shadow-md">立即提交截圖</button>
+                <button id="checkBtn" onclick="handleImageCheckin()" class="w-full bg-green-500 text-white py-4 rounded-xl font-bold shadow-md">提交截圖打卡</button>
             </section>
 
             <section id="history" class="tab-content bg-white p-4 rounded-2xl border min-h-[300px]">
@@ -93,7 +93,7 @@
                 </div>
                 <div id="pendingList" class="space-y-3 mb-6"></div>
                 <hr class="my-6">
-                <h3 class="font-bold mb-4 text-gray-700 text-sm">成員截圖動態 (最新 50 筆)</h3>
+                <h3 class="font-bold mb-4 text-gray-700 text-sm">全體成員最新截圖 (最新 50 筆)</h3>
                 <div id="adminAllList" class="space-y-4 max-h-[500px] overflow-y-auto"></div>
             </section>
         </div>
@@ -124,7 +124,7 @@
                 db.ref('users/'+acc).once('value', snap => {
                     const d = snap.val();
                     if(d && d.pwd === pwd) loginOk({...d, role:'user'});
-                    else alert('帳密錯誤或尚未通過審核');
+                    else alert('帳密錯誤或帳號尚未審核通過');
                 });
             }
         };
@@ -142,21 +142,18 @@
             loadLogs();
         }
 
-        // 圖片預覽顯示
         window.previewImage = () => {
             const file = document.getElementById('imgInput').files[0];
             if(file) document.getElementById('fileNameDisplay').innerText = "已選取：" + file.name;
         };
 
-        // 核心功能：圖片轉 Base64 並存入資料庫
         window.handleImageCheckin = () => {
             const fileInput = document.getElementById('imgInput');
             const file = fileInput.files[0];
-            if(!file) return alert('請先選擇截圖');
+            if(!file) return alert('請先選取截圖檔案');
 
             const reader = new FileReader();
             reader.onload = function(e) {
-                // 這裡會將圖片轉換為字串形式存儲，方便直接在網頁顯示
                 sendRecord('拍照打卡', e.target.result);
                 fileInput.value = "";
                 document.getElementById('fileNameDisplay').innerText = "點擊選取或拍攝截圖";
@@ -168,7 +165,7 @@
             db.ref('attendance_records').push({
                 user: curUser.acc, nick: curUser.nick, type, detail,
                 time: new Date().toLocaleString('zh-TW', {hour12:false})
-            }).then(() => alert('打卡成功！'));
+            }).then(() => alert('已成功送出紀錄！'));
         };
 
         function loadLogs() {
@@ -178,24 +175,22 @@
                 list.reverse().forEach(r => {
                     const isImg = r.detail.startsWith('data:image');
                     const display = isImg ? `<img src="${r.detail}" class="record-img" onclick="window.open(this.src)">` : r.detail;
-                    
                     const line = `<div class="p-3 border-b bg-white rounded-xl shadow-sm mb-2">
                         <div class="flex justify-between font-bold text-blue-600 mb-1"><span>${r.nick}</span> <span class="text-gray-300 text-[10px]">${r.time}</span></div>
                         <div class="text-xs text-gray-500 mb-2">${r.type}</div>
                         <div>${display}</div>
                     </div>`;
-                    
                     if(r.user === curUser.acc) h += line;
                     all += line;
                 });
-                document.getElementById('personalList').innerHTML = h || "暫無紀錄";
+                document.getElementById('personalList').innerHTML = h || "尚無任何紀錄";
                 document.getElementById('adminAllList').innerHTML = all;
             });
         }
 
-        // 管理員審核與跳轉
         window.showAdmin = () => { document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); document.getElementById('admin').classList.add('active'); };
         window.closeAdmin = () => { document.getElementById('admin').classList.remove('active'); document.getElementById('schedule').classList.add('active'); };
+        
         function loadAdminData() {
             db.ref('pending_users').on('value', snap => {
                 let h = "";
@@ -206,9 +201,10 @@
                         <button onclick="approve('${u.acc}')" class="bg-red-500 text-white px-3 py-1 rounded-lg">核准</button>
                     </div>`;
                 });
-                document.getElementById('pendingList').innerHTML = h || "目前無申請";
+                document.getElementById('pendingList').innerHTML = h || "目前沒有新的註冊申請";
             });
         }
+
         window.approve = (acc) => {
             db.ref('pending_users/'+acc).once('value', snap => {
                 db.ref('users/'+acc).set(snap.val()).then(() => db.ref('pending_users/'+acc).remove());
@@ -228,6 +224,7 @@
             let opt = `${h}:00-${nH}:00`;
             sel.innerHTML += `<option value="${opt}">${opt}</option>`;
         }
+
         document.querySelectorAll('.nav-btn').forEach(btn => {
             btn.onclick = () => {
                 document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -236,13 +233,6 @@
                 document.getElementById(btn.dataset.target).classList.add('active');
             };
         });
-        setInterval(() => {
-            const min = new Date().getMinutes();
-            const isOk = (min >= 58 || min <= 3);
-            const status = document.getElementById('checkinStatus');
-            status.innerText = isOk ? "● 現在可以打卡" : "○ 非打卡時段 (58-03)";
-            status.className = isOk ? "mb-4 p-2 bg-green-100 text-green-700 text-xs font-bold" : "mb-4 p-2 bg-red-50 text-red-400 text-xs font-bold";
-        }, 1000);
     </script>
 </body>
 </html>

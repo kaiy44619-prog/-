@@ -3,140 +3,226 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>岳笙團隊管理系統 - 穩定版</title>
+    <title>岳笙團隊管理系統 - 30人正式版</title>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <style>
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        .animate-in { animation: fadeIn 0.3s ease-in; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen font-sans">
+<body class="bg-gray-50 min-h-screen pb-10">
+    <script>
+        // --- 請在此填入你的 Firebase Config 即可同步雲端 ---
+        const firebaseConfig = {
+          apiKey: "AIzaSyDJFE9FbQhNGZsWJsRPkqPBfyj77KsVlwM",
+          authDomain: "yuesheng-system-5a259.firebaseapp.com",
+          databaseURL: "https://yuesheng-system-5a259-default-rtdb.asia-southeast1.firebasedatabase.app", 
+          projectId: "yuesheng-system-5a259",
+          storageBucket: "yuesheng-system-5a259.firebasestorage.app",
+          messagingSenderId: "1018427374329",
+          appId: "1:1018427374329:web:4087098c172d7c1364c028"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // --- 自動生成 30 個員工帳號清單 ---
+        const MASTER_USERS = {
+            'admin': { pwd: '123', nick: '岳笙總監', role: 'admin' }
+        };
+        for (let i = 1; i <= 30; i++) {
+            let id = i < 10 ? '0' + i : i;
+            MASTER_USERS[`jhjz${id}`] = { pwd: '20260214', nick: `成員${id}`, role: 'user' };
+        }
+    </script>
+
     <div id="app" class="max-w-md mx-auto px-4 py-8">
-        
-        <!-- 登入/註冊頁面 -->
-        <div id="authPage" class="bg-white p-8 rounded-3xl shadow-xl animate-in">
-            <h2 id="authTitle" class="text-2xl font-bold text-center mb-6 text-blue-600">岳笙團隊登入</h2>
+        <!-- 登入頁面 -->
+        <div id="authPage" class="bg-white p-8 rounded-3xl shadow-xl mt-10">
+            <h2 class="text-2xl font-bold text-center mb-2 text-blue-600">岳笙團隊</h2>
+            <p class="text-center text-gray-400 text-xs mb-6">請輸入配發帳號登入</p>
             <div class="space-y-4">
-                <input id="uAcc" type="text" placeholder="帳號" class="w-full p-4 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-400">
+                <input id="uAcc" type="text" placeholder="帳號 (jhjz01-30)" class="w-full p-4 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-400">
                 <input id="uPwd" type="password" placeholder="密碼" class="w-full p-4 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-400">
-                <div id="regFields" class="hidden space-y-4">
-                    <input id="uNick" type="text" placeholder="你的名字 / 藝名" class="w-full p-4 border rounded-2xl outline-none focus:ring-2 focus:ring-blue-400">
-                </div>
-                <button id="mainBtn" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg active:scale-95 transition-all">登入系統</button>
-                <p id="toggleAuth" class="text-center text-sm text-blue-500 cursor-pointer pt-2">還沒有帳號？點此註冊</p>
+                <button id="loginBtn" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg active:scale-95 transition-all">登入系統</button>
             </div>
         </div>
 
-        <!-- 主系統頁面 (預設隱藏) -->
-        <div id="mainPage" class="hidden animate-in">
-            <div class="flex justify-between items-center mb-6">
-                <h1 class="text-xl font-bold">你好，<span id="userHello" class="text-blue-600"></span></h1>
-                <button onclick="location.reload()" class="text-gray-400"><i class="fa fa-sign-out text-xl"></i></button>
+        <!-- 主系統 -->
+        <div id="mainPage" class="hidden">
+            <div class="flex justify-between items-center mb-4">
+                <h1 class="text-lg font-bold"><span id="userHello" class="text-blue-600"></span></h1>
+                <div class="text-xs text-gray-400 font-mono" id="liveClock">00:00:00</div>
             </div>
 
-            <!-- 選單 -->
-            <nav class="flex bg-white rounded-2xl shadow-sm mb-6 p-1">
-                <button class="flex-1 py-3 rounded-xl font-bold nav-btn bg-blue-600 text-white" data-target="schedule">排班</button>
-                <button class="flex-1 py-3 rounded-xl font-bold nav-btn" data-target="checkin">打卡</button>
-                <button id="adminTab" class="flex-1 py-3 rounded-xl font-bold nav-btn hidden text-red-500" data-target="admin">報表</button>
+            <nav class="grid grid-cols-4 bg-white rounded-2xl shadow-sm mb-6 p-1 gap-1 text-xs text-center">
+                <button class="py-3 rounded-xl font-bold nav-btn bg-blue-600 text-white" data-target="schedule">預約</button>
+                <button class="py-3 rounded-xl font-bold nav-btn" data-target="checkin">打卡</button>
+                <button class="py-3 rounded-xl font-bold nav-btn" data-target="history">紀錄</button>
+                <button id="adminTab" class="py-3 rounded-xl font-bold nav-btn hidden text-red-500" data-target="admin">報表</button>
             </nav>
 
-            <!-- 排班分頁 -->
+            <!-- 1. 排班區 (24小時) -->
             <section id="schedule" class="tab-content active">
                 <div class="bg-white p-6 rounded-2xl shadow-sm mb-4">
-                    <h3 class="font-bold mb-4 italic text-gray-700">1. 預約你的時段</h3>
-                    <input type="date" id="dateInput" class="w-full p-3 border rounded-xl mb-3">
-                    <select id="timeInput" class="w-full p-3 border rounded-xl mb-4">
-                        <option>20:00 - 21:00</option>
-                        <option>21:00 - 22:00</option>
-                        <option>22:00 - 23:00</option>
-                        <option>23:00 - 00:00</option>
-                    </select>
-                    <button id="addSchedBtn" class="w-full bg-blue-100 text-blue-600 py-3 rounded-xl font-bold">+ 提交排班申請</button>
+                    <h3 class="font-bold mb-4">申請排班時段</h3>
+                    <input type="date" id="dateInput" class="w-full p-3 border rounded-xl mb-3 text-sm">
+                    <select id="timeInput" class="w-full p-3 border rounded-xl mb-4 text-sm"></select>
+                    <button id="addSchedBtn" class="w-full bg-blue-100 text-blue-600 py-3 rounded-xl font-bold">送出排班申請</button>
                 </div>
-                <div id="mySchedules" class="space-y-2"></div>
             </section>
 
-            <!-- 打卡分頁 -->
+            <!-- 2. 打卡區 (58-03分限制) -->
             <section id="checkin" class="tab-content">
                 <div class="bg-white p-6 rounded-2xl shadow-sm text-center">
-                    <p class="text-sm text-gray-500 mb-4">請確保已在排班時段內</p>
-                    <label class="block w-full bg-gray-100 border-2 border-dashed border-gray-300 py-8 rounded-2xl cursor-pointer mb-4">
+                    <div id="lockMsg" class="mb-4 p-4 rounded-xl text-sm font-bold bg-red-50 text-red-500 border border-red-100">鎖定中</div>
+                    <label id="uploadLabel" class="opacity-30 pointer-events-none block w-full bg-gray-100 border-2 border-dashed border-gray-300 py-8 rounded-2xl cursor-pointer mb-4">
                         <i class="fa fa-camera text-2xl text-gray-400 mb-2"></i>
-                        <span class="block text-gray-500">點擊拍照或上傳截圖</span>
-                        <input type="file" id="fileInput" accept="image/*" class="hidden">
+                        <span class="block text-gray-400">拍照打卡</span>
+                        <input type="file" id="fileInput" accept="image/*" class="hidden" disabled>
                     </label>
-                    <div id="previewArea" class="hidden mb-4"><img id="imgPrev" class="rounded-lg shadow-md mx-auto max-h-40"></div>
-                    <button id="checkBtn" class="w-full bg-green-500 text-white py-4 rounded-xl font-bold shadow-lg">確認上班打卡</button>
+                    <button id="checkBtn" disabled class="w-full bg-gray-300 text-white py-4 rounded-xl font-bold">非打卡時段</button>
                 </div>
             </section>
 
-            <!-- 管理後台/報表 -->
+            <!-- 3. 個人紀錄區 -->
+            <section id="history" class="tab-content">
+                <div class="bg-white p-6 rounded-2xl shadow-sm min-h-[300px]">
+                    <h3 class="font-bold mb-4">我的考勤紀錄</h3>
+                    <div id="personalList" class="space-y-3"></div>
+                </div>
+            </section>
+
+            <!-- 4. 總監報表區 -->
             <section id="admin" class="tab-content">
                 <div class="bg-white p-6 rounded-2xl shadow-sm">
                     <div class="flex justify-between items-center mb-4">
-                        <h3 class="font-bold">全體數據報表</h3>
-                        <button id="exportBtn" class="text-xs bg-black text-white px-3 py-1 rounded">導出 CSV</button>
+                        <h3 class="font-bold text-red-500 text-sm">全體數據 (30人)</h3>
+                        <button id="exportBtn" class="text-xs bg-black text-white px-3 py-1 rounded">匯出 CSV</button>
                     </div>
-                    <div id="reportList" class="space-y-3"></div>
+                    <div id="reportList" class="space-y-2 text-xs"></div>
                 </div>
             </section>
         </div>
     </div>
 
     <script>
-        const store = {
-            users: () => JSON.parse(localStorage.getItem('ys_users')) || [{acc:'admin', pwd:'123', nick:'岳笙總監', role:'admin'}],
-            data: () => JSON.parse(localStorage.getItem('ys_data')) || []
-        };
+        let currentUser = null;
 
-        let isReg = false;
-        let user = null;
+        // 生成 24 小時選項
+        const select = document.getElementById('timeInput');
+        for(let i=0; i<24; i++) {
+            let h = i < 10 ? '0'+i : i;
+            let next = (i+1) < 10 ? '0'+(i+1) : (i+1);
+            if(i === 23) next = "00";
+            let opt = document.createElement('option');
+            opt.value = `${h}:00-${next}:00`;
+            opt.innerText = `${h}:00 - ${next}:00`;
+            select.appendChild(opt);
+        }
 
-        // 登入/註冊切換
-        document.getElementById('toggleAuth').onclick = () => {
-            isReg = !isReg;
-            document.getElementById('authTitle').innerText = isReg ? '建立新帳號' : '岳笙團隊登入';
-            document.getElementById('regFields').classList.toggle('hidden');
-            document.getElementById('mainBtn').innerText = isReg ? '註冊帳號' : '登入系統';
-            document.getElementById('toggleAuth').innerText = isReg ? '已有帳號？點此登入' : '還沒有帳號？點此註冊';
-        };
-
-        // 按鈕點擊
-        document.getElementById('mainBtn').onclick = () => {
-            const acc = document.getElementById('uAcc').value;
-            const pwd = document.getElementById('uPwd').value;
-            const users = store.users();
-
-            if(isReg) {
-                const nick = document.getElementById('uNick').value;
-                if(!acc || !pwd || !nick) return alert('請填寫完整');
-                users.push({acc, pwd, nick, role:'user'});
-                localStorage.setItem('ys_users', JSON.stringify(users));
-                alert('註冊成功！請登入');
-                location.reload();
+        // 登入邏輯 (比對內建 30 個帳號)
+        document.getElementById('loginBtn').onclick = () => {
+            const acc = document.getElementById('uAcc').value.toLowerCase().trim();
+            const pwd = document.getElementById('uPwd').value.trim();
+            
+            if(MASTER_USERS[acc] && MASTER_USERS[acc].pwd === pwd) {
+                currentUser = MASTER_USERS[acc];
+                currentUser.id = acc;
+                startApp();
             } else {
-                const found = users.find(u => u.acc === acc && u.pwd === pwd);
-                if(found) {
-                    user = found;
-                    startApp();
-                } else { alert('帳密錯誤'); }
+                alert('帳號或密碼錯誤！請檢查');
             }
         };
 
         function startApp() {
             document.getElementById('authPage').classList.add('hidden');
             document.getElementById('mainPage').classList.remove('hidden');
-            document.getElementById('userHello').innerText = user.nick;
-            if(user.role === 'admin') document.getElementById('adminTab').classList.remove('hidden');
-            renderSchedules();
-            renderReport();
+            document.getElementById('userHello').innerText = "Hi, " + currentUser.nick;
+            if(currentUser.role === 'admin') document.getElementById('adminTab').classList.remove('hidden');
+            loadCloudData();
         }
 
-        // 分頁切換
+        // 分頁與時鐘
+        setInterval(() => {
+            const now = new Date();
+            const min = now.getMinutes();
+            document.getElementById('liveClock').innerText = now.toTimeString().split(' ')[0];
+            const isWindow = (min >= 58 || min <= 3);
+            const btn = document.getElementById('checkBtn');
+            const label = document.getElementById('uploadLabel');
+            const msg = document.getElementById('lockMsg');
+
+            if(isWindow) {
+                btn.disabled = false; btn.innerText = "立即打卡";
+                btn.className = "w-full bg-green-500 text-white py-4 rounded-xl font-bold shadow-lg";
+                label.className = "block w-full bg-blue-50 border-2 border-dashed border-blue-400 py-8 rounded-2xl cursor-pointer mb-4";
+                document.getElementById('fileInput').disabled = false;
+                msg.innerText = "打卡時段開啟中 (58分-03分)";
+                msg.className = "mb-4 p-4 rounded-xl text-sm font-bold bg-green-50 text-green-600 border border-green-100";
+            } else {
+                btn.disabled = true; btn.innerText = "鎖定中";
+                btn.className = "w-full bg-gray-300 text-white py-4 rounded-xl font-bold cursor-not-allowed";
+                label.className = "opacity-30 pointer-events-none block w-full bg-gray-100 border-2 border-dashed border-gray-300 py-8 rounded-2xl mb-4";
+                document.getElementById('fileInput').disabled = true;
+                msg.innerText = "非打卡時段 (58分-03分)";
+                msg.className = "mb-4 p-4 rounded-xl text-sm font-bold bg-red-50 text-red-500 border border-red-100";
+            }
+        }, 1000);
+
+        // 雲端同步功能
+        async function uploadRecord(type, detail) {
+            if(!db) return;
+            const ref = db.ref('yuesheng_records').push();
+            await ref.set({
+                user: currentUser.id,
+                nick: currentUser.nick,
+                type: type,
+                time: new Date().toLocaleString(),
+                detail: detail,
+                timestamp: Date.now()
+            });
+            loadCloudData();
+        }
+
+        function loadCloudData() {
+            db.ref('yuesheng_records').on('value', (snap) => {
+                const data = snap.val();
+                let personalHtml = "";
+                let adminHtml = "";
+                const records = [];
+                for(let k in data) records.push(data[k]);
+                records.reverse();
+
+                records.forEach(r => {
+                    const item = `<div class="p-3 border-b border-gray-100 flex justify-between items-center text-xs">
+                        <div><b>${r.type}</b> <br> <span class="text-gray-400">${r.time}</span></div>
+                        <div class="text-blue-500">${r.detail}</div>
+                    </div>`;
+                    if(r.user === currentUser.id) personalHtml += item;
+                    adminHtml += `<div class="p-2 border-b"><b>${r.nick}</b> (${r.user}) <br> ${r.time} - ${r.type}</div>`;
+                });
+                document.getElementById('personalList').innerHTML = personalHtml || '<p class="text-center text-gray-400 py-10">暫無紀錄</p>';
+                document.getElementById('reportList').innerHTML = adminHtml;
+            });
+        }
+
+        document.getElementById('addSchedBtn').onclick = () => {
+            const d = document.getElementById('dateInput').value;
+            const t = document.getElementById('timeInput').value;
+            if(!d) return alert('請選擇日期');
+            uploadRecord('排班', `${d} ${t}`);
+            alert('已送出雲端');
+        };
+
+        document.getElementById('checkBtn').onclick = () => {
+            if(!document.getElementById('fileInput').files[0]) return alert('請先拍照！');
+            uploadRecord('打卡', '✅ 已打卡');
+            alert('打卡成功，已同步雲端');
+        };
+
         document.querySelectorAll('.nav-btn').forEach(btn => {
             btn.onclick = () => {
                 document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('bg-blue-600', 'text-white'));
@@ -146,68 +232,17 @@
             };
         });
 
-        // 提交排班
-        document.getElementById('addSchedBtn').onclick = () => {
-            const d = document.getElementById('dateInput').value;
-            const t = document.getElementById('timeInput').value;
-            if(!d) return alert('請選擇日期');
-            const allData = store.data();
-            allData.push({id:Date.now(), name:user.nick, date:d, time:t, type:'班表', status:'待審核'});
-            localStorage.setItem('ys_data', JSON.stringify(allData));
-            renderSchedules();
-            alert('排班已送出');
-        };
-
-        function renderSchedules() {
-            const my = store.data().filter(d => d.name === user.nick);
-            document.getElementById('mySchedules').innerHTML = my.map(m => `
-                <div class="bg-white p-4 rounded-xl shadow-sm flex justify-between items-center text-sm">
-                    <span><b>${m.date}</b> <br> ${m.time}</span>
-                    <span class="bg-blue-50 text-blue-500 px-3 py-1 rounded-full text-xs">${m.status}</span>
-                </div>
-            `).join('');
-        }
-
-        function renderReport() {
-            const all = store.data();
-            document.getElementById('reportList').innerHTML = all.map(a => `
-                <div class="border-b pb-2 text-sm">
-                    <div class="flex justify-between"><b>${a.name}</b> <span>${a.date}</span></div>
-                    <div class="text-gray-500 text-xs">${a.time} - ${a.status}</div>
-                </div>
-            `).join('');
-        }
-
-        // 導出 CSV (報表功能)
         document.getElementById('exportBtn').onclick = () => {
-            let csv = "名字,日期,時段,狀態\n";
-            store.data().forEach(d => {
-                csv += `${d.name},${d.date},${d.time},${d.status}\n`;
+            let csv = "名字,帳號,類別,時間,細節\n";
+            db.ref('yuesheng_records').once('value', (snap) => {
+                snap.forEach(child => {
+                    const r = child.val();
+                    csv += `${r.nick},${r.user},${r.type},${r.time},${r.detail}\n`;
+                });
+                const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv; charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = `岳笙月報表.csv`; a.click();
             });
-            const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv; charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `岳笙團隊_${new Date().toLocaleDateString()}.csv`;
-            a.click();
-        };
-
-        // 圖片預覽
-        document.getElementById('fileInput').onchange = function() {
-            const file = this.files[0];
-            if(file) {
-                const reader = new FileReader();
-                reader.onload = e => {
-                    document.getElementById('imgPrev').src = e.target.result;
-                    document.getElementById('previewArea').classList.remove('hidden');
-                };
-                reader.readAsDataURL(file);
-            }
-        };
-
-        document.getElementById('checkBtn').onclick = () => {
-            if(!document.getElementById('fileInput').files[0]) return alert('請先上傳截圖');
-            alert('打卡數據已儲存至本地端');
         };
     </script>
 </body>

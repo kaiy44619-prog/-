@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>岳笙團隊雲端系統 v9.0</title>
+    <title>金好家族陪檔打卡表</title>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -12,106 +12,89 @@
         .nav-btn.active { background-color: #2563eb; color: white; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
+        .record-img { max-width: 150px; border-radius: 8px; margin-top: 5px; cursor: pointer; }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body class="bg-gray-100">
 
     <div id="app" class="max-w-md mx-auto px-4 py-6">
         
-        <!-- 登入與註冊介面 -->
-        <div id="authPage" class="bg-white p-8 rounded-3xl shadow-xl mt-10">
-            <h2 id="authTitle" class="text-2xl font-bold text-center mb-6 text-blue-600">岳笙系統登入</h2>
-            
-            <div id="loginForm" class="space-y-4">
+        <div id="authPage" class="bg-white p-8 rounded-3xl shadow-xl mt-10 text-center">
+            <h2 class="text-2xl font-bold mb-6 text-blue-600">金好家族系統</h2>
+            <div id="loginForm" class="space-y-4 text-left">
                 <input id="loginAcc" type="text" placeholder="帳號" class="w-full p-4 border rounded-2xl outline-none">
                 <input id="loginPwd" type="password" placeholder="密碼" class="w-full p-4 border rounded-2xl outline-none">
-                <button id="loginBtn" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg">登入系統</button>
-                <p class="text-center text-sm text-gray-400 cursor-pointer" onclick="toggleAuth(true)">點此註冊新帳號</p>
+                <button id="loginBtn" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg">進入系統</button>
+                <p class="text-center text-sm text-gray-400 mt-4 cursor-pointer" onclick="toggleAuth(true)">成員註冊申請</p>
             </div>
-
-            <div id="regForm" class="hidden space-y-4">
+            <div id="regForm" class="hidden space-y-4 text-left">
                 <input id="regAcc" type="text" placeholder="設定登入帳號" class="w-full p-4 border rounded-2xl outline-none">
-                <input id="regNick" type="text" placeholder="真實暱稱 (審核用)" class="w-full p-4 border rounded-2xl outline-none">
+                <input id="regNick" type="text" placeholder="顯示暱稱" class="w-full p-4 border rounded-2xl outline-none">
                 <input id="regPwd" type="password" placeholder="設定密碼" class="w-full p-4 border rounded-2xl outline-none">
-                <button id="regBtn" class="w-full bg-green-500 text-white py-4 rounded-2xl font-bold shadow-lg">提交申請</button>
-                <p class="text-center text-sm text-gray-400 cursor-pointer" onclick="toggleAuth(false)">已有帳號？返回登入</p>
+                <button id="regBtn" class="w-full bg-green-500 text-white py-4 rounded-2xl font-bold shadow-lg">提交註冊</button>
+                <p class="text-center text-sm text-gray-400 mt-4 cursor-pointer" onclick="toggleAuth(false)">返回登入</p>
             </div>
         </div>
 
-        <!-- 主功能介面 -->
         <div id="mainPage" class="hidden">
             <div class="flex justify-between items-center mb-4 px-2">
-                <div>
-                    <p class="text-[10px] text-gray-400">目前使用者</p>
-                    <h1 class="text-xl font-bold text-blue-600" id="userHello">載入中...</h1>
-                </div>
-                <button onclick="location.reload()" class="bg-gray-200 text-gray-600 px-3 py-1 rounded-lg text-xs">登出</button>
+                <h1 class="text-xl font-bold text-blue-600">Hi, <span id="userHello">載入中</span></h1>
+                <button onclick="location.reload()" class="text-xs bg-gray-200 px-3 py-1 rounded text-gray-500">登出</button>
             </div>
 
-            <nav class="grid grid-cols-4 bg-white rounded-2xl shadow-sm mb-6 p-1 gap-1 text-[11px] text-center border">
+            <nav class="grid grid-cols-4 bg-white rounded-2xl shadow-sm mb-4 p-1 border">
                 <button class="py-3 rounded-xl font-bold nav-btn active" data-target="schedule">預約</button>
                 <button class="py-3 rounded-xl font-bold nav-btn" data-target="checkin">打卡</button>
                 <button class="py-3 rounded-xl font-bold nav-btn" data-target="history">紀錄</button>
                 <button class="py-3 rounded-xl font-bold nav-btn" data-target="profile">個人</button>
             </nav>
 
-            <!-- 管理員專屬紅色入口 (只有管理員看得到) -->
-            <div id="adminQuickLink" class="hidden mb-6 bg-red-600 text-white p-4 rounded-2xl shadow-lg flex justify-between items-center" onclick="showAdminTab()">
+            <div id="adminQuickLink" class="hidden mb-4 bg-red-600 text-white p-5 rounded-2xl shadow-lg flex justify-between items-center cursor-pointer" onclick="showAdmin()">
                 <div>
-                    <p class="font-bold">總監專屬：待審核清單</p>
-                    <p class="text-[10px] opacity-80">點擊此處處理成員申請</p>
+                    <p class="font-bold text-lg">審核管理後台</p>
+                    <p class="text-xs opacity-80 text-white">點此查看圖片動態與審核</p>
                 </div>
-                <i class="fa fa-chevron-right"></i>
+                <i class="fa fa-eye text-2xl"></i>
             </div>
 
-            <!-- 介面內容 -->
-            <section id="schedule" class="tab-content active space-y-4">
-                <div class="bg-white p-6 rounded-2xl border shadow-sm">
-                    <h3 class="font-bold mb-4">預約排班 (24H)</h3>
-                    <input type="date" id="dateInput" class="w-full p-4 border rounded-xl mb-3 bg-gray-50">
-                    <select id="timeInput" class="w-full p-4 border rounded-xl mb-4 bg-gray-50"></select>
-                    <button onclick="sendRecord('預約排班', document.getElementById('dateInput').value + ' ' + document.getElementById('timeInput').value)" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold">送出雲端預約</button>
-                </div>
+            <section id="schedule" class="tab-content active bg-white p-6 rounded-2xl border">
+                <h3 class="font-bold mb-4">排班預約</h3>
+                <input type="date" id="dateInput" class="w-full p-4 border rounded-xl mb-3 bg-gray-50 text-sm">
+                <select id="timeInput" class="w-full p-4 border rounded-xl mb-4 bg-gray-50 text-sm"></select>
+                <button onclick="sendRecord('預約排班', document.getElementById('dateInput').value + ' ' + document.getElementById('timeInput').value)" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold">送出資料</button>
             </section>
 
-            <section id="checkin" class="tab-content space-y-4">
-                <div class="bg-white p-6 rounded-2xl border shadow-sm text-center">
-                    <div id="checkinStatus" class="mb-4 p-3 rounded-xl text-xs font-bold"></div>
-                    <label class="block w-full bg-gray-50 border-2 border-dashed border-gray-300 py-12 rounded-2xl mb-4 cursor-pointer">
-                        <i class="fa fa-image text-4xl text-gray-300 mb-2"></i>
-                        <span class="block text-gray-400">點擊上傳截圖</span>
-                        <input type="file" id="fileInput" accept="image/*" class="hidden">
+            <section id="checkin" class="tab-content bg-white p-6 rounded-2xl border text-center">
+                <div id="checkinStatus" class="mb-4 p-3 rounded-xl text-xs font-bold"></div>
+                <div class="mb-4">
+                    <label class="block w-full border-2 border-dashed border-gray-300 rounded-2xl p-6 cursor-pointer hover:bg-gray-50">
+                        <i class="fa fa-camera text-3xl text-gray-400 mb-2"></i>
+                        <span id="fileNameDisplay" class="block text-sm text-gray-500">點擊選取或拍攝截圖</span>
+                        <input type="file" id="imgInput" accept="image/*" class="hidden" onchange="previewImage()">
                     </label>
-                    <button id="checkBtn" onclick="sendRecord('拍照打卡', '✅ 已成功上傳')" class="w-full bg-green-500 text-white py-4 rounded-xl font-bold shadow-lg">立即提交打卡</button>
                 </div>
+                <button id="checkBtn" onclick="handleImageCheckin()" class="w-full bg-green-500 text-white py-4 rounded-xl font-bold shadow-md">立即提交截圖</button>
             </section>
 
-            <section id="history" class="tab-content space-y-4">
-                <div class="bg-white p-6 rounded-2xl border shadow-sm min-h-[300px]">
-                    <h3 class="font-bold mb-4">最近 50 筆紀錄</h3>
-                    <div id="personalList" class="space-y-3"></div>
-                </div>
+            <section id="history" class="tab-content bg-white p-4 rounded-2xl border min-h-[300px]">
+                <div id="personalList" class="space-y-4 text-xs"></div>
             </section>
 
-            <section id="profile" class="tab-content space-y-4">
-                <div class="bg-white p-6 rounded-2xl border shadow-sm">
-                    <h3 class="font-bold mb-6 text-center">修改我的暱稱</h3>
-                    <div class="space-y-4">
-                        <input id="newNick" type="text" class="w-full p-4 border rounded-xl outline-none focus:ring-2 focus:ring-blue-400" placeholder="輸入新名稱">
-                        <button onclick="updateNickname()" class="w-full bg-black text-white py-4 rounded-xl font-bold shadow-md">儲存並重新整理</button>
-                    </div>
-                </div>
+            <section id="profile" class="tab-content bg-white p-6 rounded-2xl border">
+                <h3 class="font-bold mb-4 text-center text-sm">修改名字</h3>
+                <input id="newNick" type="text" class="w-full p-4 border rounded-xl mb-4 text-sm" placeholder="輸入新暱稱">
+                <button onclick="doUpdateName()" class="w-full bg-black text-white py-4 rounded-xl font-bold">儲存修改</button>
             </section>
 
-            <!-- 管理員介面 -->
-            <section id="admin" class="tab-content space-y-4">
-                <div class="bg-white p-6 rounded-2xl border-2 border-red-200 shadow-sm">
-                    <div class="flex justify-between mb-4">
-                        <h3 class="font-bold text-red-600">待審核成員</h3>
-                        <button onclick="closeAdminTab()" class="text-xs text-gray-400">返回功能區</button>
-                    </div>
-                    <div id="pendingList" class="space-y-3"></div>
+            <section id="admin" class="tab-content bg-white p-6 rounded-2xl border-2 border-red-500 shadow-xl">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="font-bold text-red-600">管理後台</h3>
+                    <button onclick="closeAdmin()" class="text-xs text-gray-400">返回</button>
                 </div>
+                <div id="pendingList" class="space-y-3 mb-6"></div>
+                <hr class="my-6">
+                <h3 class="font-bold mb-4 text-gray-700 text-sm">成員截圖動態 (最新 50 筆)</h3>
+                <div id="adminAllList" class="space-y-4 max-h-[500px] overflow-y-auto"></div>
             </section>
         </div>
     </div>
@@ -126,139 +109,125 @@
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-
-        let currentUser = null;
+        let curUser = null;
 
         function toggleAuth(isReg) {
-            document.getElementById('authTitle').innerText = isReg ? '註冊申請' : '岳笙系統登入';
             document.getElementById('loginForm').classList.toggle('hidden', isReg);
             document.getElementById('regForm').classList.toggle('hidden', !isReg);
         }
 
-        // 登入邏輯 (強制管理員優先)
         document.getElementById('loginBtn').onclick = () => {
             const acc = document.getElementById('loginAcc').value.trim().toLowerCase();
             const pwd = document.getElementById('loginPwd').value.trim();
-
-            if(acc === 'admin' && pwd === '123') {
-                return loginSuccess({ acc: 'admin', nick: '岳笙總監', role: 'admin' });
+            if(acc === 'admin' && pwd === '123') loginOk({ acc:'admin', nick:'岳笙', role:'admin' });
+            else {
+                db.ref('users/'+acc).once('value', snap => {
+                    const d = snap.val();
+                    if(d && d.pwd === pwd) loginOk({...d, role:'user'});
+                    else alert('帳密錯誤或尚未通過審核');
+                });
             }
-
-            db.ref('users/' + acc).once('value', snap => {
-                const d = snap.val();
-                if(d && d.pwd === pwd) {
-                    loginSuccess({ ...d, role: 'user' });
-                } else {
-                    alert('帳號密碼錯誤，或該帳號尚未核准！');
-                }
-            });
         };
 
-        // 註冊申請
-        document.getElementById('regBtn').onclick = () => {
-            const acc = document.getElementById('regAcc').value.trim().toLowerCase();
-            const nick = document.getElementById('regNick').value.trim();
-            const pwd = document.getElementById('regPwd').value.trim();
-            if(!acc || !nick || !pwd) return alert('請完整填寫');
-            db.ref('pending_users/' + acc).set({ acc, nick, pwd }).then(() => {
-                alert('申請已送出，請通知總監審核！');
-                location.reload();
-            });
-        };
-
-        function loginSuccess(u) {
-            currentUser = u;
+        function loginOk(u) {
+            curUser = u;
             document.getElementById('authPage').classList.add('hidden');
             document.getElementById('mainPage').classList.remove('hidden');
-            document.getElementById('userHello').innerText = currentUser.nick;
-            document.getElementById('newNick').value = currentUser.nick;
-            
-            if(currentUser.role === 'admin') {
+            document.getElementById('userHello').innerText = curUser.nick;
+            document.getElementById('newNick').value = curUser.nick;
+            if(curUser.role === 'admin') {
                 document.getElementById('adminQuickLink').classList.remove('hidden');
-                loadPending();
+                loadAdminData();
             }
-            loadRecords();
+            loadLogs();
         }
 
-        // [重要] 改名並強制重新讀取
-        window.updateNickname = () => {
-            const n = document.getElementById('newNick').value.trim();
-            if(!n) return;
-            db.ref('users/' + currentUser.acc + '/nick').set(n).then(() => {
-                alert('名字已更改！系統將自動重新登入以生效。');
-                location.reload(); // 強制刷新頁面，確保所有變數重新讀取
-            });
+        // 圖片預覽顯示
+        window.previewImage = () => {
+            const file = document.getElementById('imgInput').files[0];
+            if(file) document.getElementById('fileNameDisplay').innerText = "已選取：" + file.name;
         };
 
-        // 審核功能
-        function showAdminTab() {
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            document.getElementById('admin').classList.add('active');
-        }
-        function closeAdminTab() {
-            document.getElementById('admin').classList.remove('active');
-            document.getElementById('schedule').classList.add('active');
+        // 核心功能：圖片轉 Base64 並存入資料庫
+        window.handleImageCheckin = () => {
+            const fileInput = document.getElementById('imgInput');
+            const file = fileInput.files[0];
+            if(!file) return alert('請先選擇截圖');
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                // 這裡會將圖片轉換為字串形式存儲，方便直接在網頁顯示
+                sendRecord('拍照打卡', e.target.result);
+                fileInput.value = "";
+                document.getElementById('fileNameDisplay').innerText = "點擊選取或拍攝截圖";
+            };
+            reader.readAsDataURL(file);
+        };
+
+        window.sendRecord = (type, detail) => {
+            db.ref('attendance_records').push({
+                user: curUser.acc, nick: curUser.nick, type, detail,
+                time: new Date().toLocaleString('zh-TW', {hour12:false})
+            }).then(() => alert('打卡成功！'));
+        };
+
+        function loadLogs() {
+            db.ref('attendance_records').limitToLast(50).on('value', snap => {
+                let h = ""; let all = "";
+                const list = []; snap.forEach(c => list.push(c.val()));
+                list.reverse().forEach(r => {
+                    const isImg = r.detail.startsWith('data:image');
+                    const display = isImg ? `<img src="${r.detail}" class="record-img" onclick="window.open(this.src)">` : r.detail;
+                    
+                    const line = `<div class="p-3 border-b bg-white rounded-xl shadow-sm mb-2">
+                        <div class="flex justify-between font-bold text-blue-600 mb-1"><span>${r.nick}</span> <span class="text-gray-300 text-[10px]">${r.time}</span></div>
+                        <div class="text-xs text-gray-500 mb-2">${r.type}</div>
+                        <div>${display}</div>
+                    </div>`;
+                    
+                    if(r.user === curUser.acc) h += line;
+                    all += line;
+                });
+                document.getElementById('personalList').innerHTML = h || "暫無紀錄";
+                document.getElementById('adminAllList').innerHTML = all;
+            });
         }
 
-        function loadPending() {
+        // 管理員審核與跳轉
+        window.showAdmin = () => { document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); document.getElementById('admin').classList.add('active'); };
+        window.closeAdmin = () => { document.getElementById('admin').classList.remove('active'); document.getElementById('schedule').classList.add('active'); };
+        function loadAdminData() {
             db.ref('pending_users').on('value', snap => {
                 let h = "";
                 snap.forEach(c => {
                     const u = c.val();
-                    h += `<div class="p-3 bg-red-50 border border-red-100 rounded-xl flex justify-between items-center text-sm">
+                    h += `<div class="p-3 bg-red-50 rounded-xl flex justify-between items-center text-xs">
                         <span><b>${u.nick}</b> (${u.acc})</span>
-                        <button onclick="approve('${u.acc}')" class="bg-red-500 text-white px-4 py-1 rounded-lg font-bold shadow-sm">核准</button>
+                        <button onclick="approve('${u.acc}')" class="bg-red-500 text-white px-3 py-1 rounded-lg">核准</button>
                     </div>`;
                 });
-                document.getElementById('pendingList').innerHTML = h || "目前沒有新的申請";
+                document.getElementById('pendingList').innerHTML = h || "目前無申請";
             });
         }
-
         window.approve = (acc) => {
             db.ref('pending_users/'+acc).once('value', snap => {
-                const data = snap.val();
-                db.ref('users/'+acc).set(data).then(() => {
-                    db.ref('pending_users/'+acc).remove();
-                    alert(acc + ' 已核准！');
-                });
+                db.ref('users/'+acc).set(snap.val()).then(() => db.ref('pending_users/'+acc).remove());
             });
         };
 
-        // 下拉時段 24H
+        window.doUpdateName = () => {
+            const n = document.getElementById('newNick').value.trim();
+            if(!n || curUser.acc === 'admin') return;
+            db.ref('users/'+curUser.acc+'/nick').set(n).then(() => location.reload());
+        };
+
         const sel = document.getElementById('timeInput');
         for(let i=0; i<24; i++){
             let h = i < 10 ? '0'+i : i;
             let nH = (i+1)%24; nH = nH < 10 ? '0'+nH : nH;
-            let opt = document.createElement('option');
-            opt.value = `${h}:00-${nH}:00`; opt.innerText = opt.value;
-            sel.appendChild(opt);
+            let opt = `${h}:00-${nH}:00`;
+            sel.innerHTML += `<option value="${opt}">${opt}</option>`;
         }
-
-        // 送出紀錄
-        window.sendRecord = (type, detail) => {
-            db.ref('attendance_records').push({
-                user: currentUser.acc, nick: currentUser.nick, type, detail,
-                time: new Date().toLocaleString('zh-TW', {hour12:false})
-            }).then(() => alert('雲端同步成功！'));
-        };
-
-        function loadRecords() {
-            db.ref('attendance_records').limitToLast(50).on('value', snap => {
-                let myH = "";
-                const list = []; snap.forEach(c => list.push(c.val()));
-                list.reverse().forEach(r => {
-                    if(r.user === currentUser.acc || currentUser.role === 'admin') {
-                        myH += `<div class="p-3 border-b text-xs flex justify-between">
-                            <div><b>${r.nick}</b>: ${r.type}<br><span class="text-gray-400">${r.time}</span></div>
-                            <div class="text-blue-500 font-bold">${r.detail}</div>
-                        </div>`;
-                    }
-                });
-                document.getElementById('personalList').innerHTML = myH || "尚無任何紀錄";
-            });
-        }
-
-        // 切換 Tab
         document.querySelectorAll('.nav-btn').forEach(btn => {
             btn.onclick = () => {
                 document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -267,17 +236,12 @@
                 document.getElementById(btn.dataset.target).classList.add('active');
             };
         });
-
-        // 打卡時鐘
         setInterval(() => {
             const min = new Date().getMinutes();
             const isOk = (min >= 58 || min <= 3);
             const status = document.getElementById('checkinStatus');
-            const btn = document.getElementById('checkBtn');
-            status.innerText = isOk ? "● 現在是打卡時段" : "○ 非打卡時段 (每小時 58~03 分)";
-            status.className = isOk ? "mb-4 p-3 bg-green-100 text-green-700 rounded-xl font-bold" : "mb-4 p-3 bg-red-50 text-red-400 rounded-xl font-bold text-[10px]";
-            btn.disabled = !isOk;
-            btn.style.opacity = isOk ? "1" : "0.4";
+            status.innerText = isOk ? "● 現在可以打卡" : "○ 非打卡時段 (58-03)";
+            status.className = isOk ? "mb-4 p-2 bg-green-100 text-green-700 text-xs font-bold" : "mb-4 p-2 bg-red-50 text-red-400 text-xs font-bold";
         }, 1000);
     </script>
 </body>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>金好家族陪檔打卡表</title>
+    <title>金好家族打卡系統</title>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -12,37 +12,36 @@
         .nav-btn.active { background-color: #2563eb; color: white; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        .record-img { max-width: 150px; border-radius: 8px; margin-top: 5px; cursor: pointer; border: 1px solid #eee; }
+        .record-img { max-width: 100%; border-radius: 12px; margin-top: 8px; cursor: pointer; border: 1px solid #ddd; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .disabled-btn { background-color: #d1d5db !important; cursor: not-allowed !important; }
     </style>
 </head>
 <body class="bg-gray-100">
 
     <div id="app" class="max-w-md mx-auto px-4 py-6">
-        <!-- 登入與註冊頁面 -->
+        <!-- 登入與註冊 -->
         <div id="authPage" class="bg-white p-8 rounded-3xl shadow-xl mt-10 text-center">
             <h2 class="text-2xl font-bold mb-6 text-blue-600">金好家族系統</h2>
-            <!-- 登入表單 -->
             <div id="loginForm" class="space-y-4 text-left">
                 <input id="loginAcc" type="text" placeholder="帳號" class="w-full p-4 border rounded-2xl outline-none">
                 <input id="loginPwd" type="password" placeholder="密碼" class="w-full p-4 border rounded-2xl outline-none">
                 <button id="loginBtn" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg">進入系統</button>
-                <p class="text-center text-sm text-gray-400 mt-4 cursor-pointer" onclick="toggleAuth(true)">沒有帳號？成員註冊申請</p>
+                <p class="text-center text-sm text-gray-400 mt-4 cursor-pointer" onclick="toggleAuth(true)">成員註冊申請</p>
             </div>
-            <!-- 註冊表單 -->
             <div id="regForm" class="hidden space-y-4 text-left">
-                <p class="text-xs text-red-500 mb-2 font-bold">註冊後請聯絡岳笙審核通過</p>
-                <input id="regAcc" type="text" placeholder="設定登入帳號" class="w-full p-4 border rounded-2xl outline-none">
-                <input id="regNick" type="text" placeholder="您的顯示暱稱" class="w-full p-4 border rounded-2xl outline-none">
-                <input id="regPwd" type="password" placeholder="設定密碼" class="w-full p-4 border rounded-2xl outline-none">
-                <button id="regBtn" class="w-full bg-green-500 text-white py-4 rounded-2xl font-bold shadow-lg">提交註冊申請</button>
-                <p class="text-center text-sm text-gray-400 mt-4 cursor-pointer" onclick="toggleAuth(false)">已有帳號？返回登入</p>
+                <p class="text-xs text-red-500 mb-2 font-bold">註冊後請聯絡岳笙審核</p>
+                <input id="regAcc" type="text" placeholder="設定帳號" class="w-full p-4 border rounded-2xl outline-none">
+                <input id="regNick" type="text" placeholder="暱稱" class="w-full p-4 border rounded-2xl outline-none">
+                <input id="regPwd" type="password" placeholder="密碼" class="w-full p-4 border rounded-2xl outline-none">
+                <button id="regBtn" class="w-full bg-green-500 text-white py-4 rounded-2xl font-bold shadow-lg">提交註冊</button>
+                <p class="text-center text-sm text-gray-400 mt-4 cursor-pointer" onclick="toggleAuth(false)">返回登入</p>
             </div>
         </div>
 
-        <!-- 主頁面 (登入後顯示) -->
+        <!-- 主頁面 -->
         <div id="mainPage" class="hidden">
             <div class="flex justify-between items-center mb-4 px-2">
-                <h1 class="text-xl font-bold text-blue-600">Hi, <span id="userHello">載入中</span></h1>
+                <h1 class="text-xl font-bold text-blue-600">Hi, <span id="userHello"></span></h1>
                 <button onclick="location.reload()" class="text-xs bg-gray-200 px-3 py-1 rounded text-gray-500">登出</button>
             </div>
 
@@ -54,10 +53,7 @@
             </nav>
 
             <div id="adminQuickLink" class="hidden mb-4 bg-red-600 text-white p-5 rounded-2xl shadow-lg flex justify-between items-center cursor-pointer" onclick="showAdmin()">
-                <div>
-                    <p class="font-bold text-lg">審核管理後台</p>
-                    <p class="text-xs opacity-80">管理成員名單、圖片與審核</p>
-                </div>
+                <div><p class="font-bold text-lg">審核管理後台</p><p class="text-xs opacity-80">查閱全體打卡與圖片</p></div>
                 <i class="fa fa-users text-2xl"></i>
             </div>
 
@@ -69,15 +65,15 @@
             </section>
 
             <section id="checkin" class="tab-content bg-white p-6 rounded-2xl border text-center">
-                <div class="mb-4 p-3 rounded-xl text-xs font-bold bg-blue-50 text-blue-600">● 24H 打卡通道開放</div>
+                <div id="timeStatus" class="mb-4 p-3 rounded-xl text-xs font-bold bg-gray-100 text-gray-500">檢測時間中...</div>
                 <div class="mb-4">
                     <label class="block w-full border-2 border-dashed border-gray-300 rounded-2xl p-6 cursor-pointer hover:bg-gray-50">
                         <i class="fa fa-camera text-3xl text-gray-400 mb-2"></i>
-                        <span id="fileNameDisplay" class="block text-sm text-gray-500">點擊選取或拍攝截圖</span>
+                        <span id="fileNameDisplay" class="block text-sm text-gray-500">選取或拍攝截圖</span>
                         <input type="file" id="imgInput" accept="image/*" class="hidden" onchange="previewImage()">
                     </label>
                 </div>
-                <button id="checkBtn" onclick="handleImageCheckin()" class="w-full bg-green-500 text-white py-4 rounded-xl font-bold shadow-md">提交截圖打卡</button>
+                <button id="checkBtn" onclick="handleImageCheckin()" class="w-full disabled-btn text-white py-4 rounded-xl font-bold shadow-md" disabled>非打卡時段</button>
             </section>
 
             <section id="history" class="tab-content bg-white p-4 rounded-2xl border min-h-[300px]">
@@ -91,18 +87,12 @@
             </section>
 
             <section id="admin" class="tab-content bg-white p-6 rounded-2xl border-2 border-red-500 shadow-xl">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="font-bold text-red-600 text-lg">管理後台</h3>
-                    <button onclick="closeAdmin()" class="text-xs text-gray-400 border px-2 py-1 rounded">返回</button>
-                </div>
-                <h4 class="font-bold text-sm mb-3 text-gray-600"><i class="fa fa-user-plus mr-1"></i> 新註冊審核</h4>
+                <div class="flex justify-between items-center mb-6"><h3 class="font-bold text-red-600 text-lg">管理後台</h3><button onclick="closeAdmin()" class="text-xs text-gray-400">返回</button></div>
+                <h4 class="font-bold text-sm mb-3 text-gray-600">新註冊審核</h4>
                 <div id="pendingList" class="space-y-2 mb-6"></div>
                 <hr class="my-6">
-                <h4 class="font-bold text-sm mb-3 text-gray-600"><i class="fa fa-address-book mr-1"></i> 家族成員清單 (<span id="userCount">0</span>)</h4>
-                <div id="userList" class="space-y-2 mb-6 max-h-48 overflow-y-auto bg-gray-50 p-2 rounded-xl"></div>
-                <hr class="my-6">
-                <h4 class="font-bold text-sm mb-3 text-gray-600"><i class="fa fa-image mr-1"></i> 全體最新截圖</h4>
-                <div id="adminAllList" class="space-y-4 max-h-[500px] overflow-y-auto"></div>
+                <h4 class="font-bold text-sm mb-3 text-gray-600">全體打卡紀錄 (即時更新)</h4>
+                <div id="adminAllList" class="space-y-4 max-h-[600px] overflow-y-auto bg-gray-50 p-3 rounded-2xl"></div>
             </section>
         </div>
     </div>
@@ -119,13 +109,28 @@
         const db = firebase.database();
         let curUser = null;
 
-        // 切換登入與註冊頁面
+        function checkTime() {
+            const m = new Date().getMinutes();
+            const canWork = (m >= 58 || m <= 3);
+            const btn = document.getElementById('checkBtn');
+            const status = document.getElementById('timeStatus');
+            if(btn && status) {
+                if(canWork) {
+                    btn.disabled = false; btn.innerText = "提交截圖打卡"; btn.classList.remove('disabled-btn'); btn.classList.add('bg-green-500');
+                    status.innerText = "● 打卡通道已開啟 (58分-03分)"; status.className = "mb-4 p-3 rounded-xl text-xs font-bold bg-green-50 text-green-600";
+                } else {
+                    btn.disabled = true; btn.innerText = "非打卡時段"; btn.classList.add('disabled-btn'); btn.classList.remove('bg-green-500');
+                    status.innerText = "● 非打卡時段 (僅限 58分-03分)"; status.className = "mb-4 p-3 rounded-xl text-xs font-bold bg-gray-100 text-gray-500";
+                }
+            }
+        }
+        setInterval(checkTime, 5000);
+
         window.toggleAuth = (isReg) => {
             document.getElementById('loginForm').classList.toggle('hidden', isReg);
             document.getElementById('regForm').classList.toggle('hidden', !isReg);
         };
 
-        // 登入邏輯
         document.getElementById('loginBtn').onclick = () => {
             const acc = document.getElementById('loginAcc').value.trim().toLowerCase();
             const pwd = document.getElementById('loginPwd').value.trim();
@@ -134,27 +139,19 @@
                 db.ref('users/'+acc).once('value', snap => {
                     const d = snap.val();
                     if(d && d.pwd === pwd) loginOk({...d, role:'user'});
-                    else alert('帳密錯誤或帳號尚未審核通過');
+                    else alert('帳密錯誤或尚未審核');
                 });
             }
         };
 
-        // 註冊邏輯 (修正點：明確串接按鈕點擊)
         document.getElementById('regBtn').onclick = () => {
             const acc = document.getElementById('regAcc').value.trim().toLowerCase();
             const nick = document.getElementById('regNick').value.trim();
             const pwd = document.getElementById('regPwd').value.trim();
-            
-            if(!acc || !nick || !pwd) return alert('請填寫完整註冊資料');
-            
-            // 檢查帳號是否已存在
-            db.ref('users/'+acc).once('value', snap => {
-                if(snap.exists()) return alert('此帳號已存在，請直接登入');
-                
-                db.ref('pending_users/'+acc).set({ acc, nick, pwd }).then(() => {
-                    alert('註冊申請已提交！請聯絡「岳笙」為您審核。');
-                    toggleAuth(false);
-                });
+            if(!acc || !nick || !pwd) return alert('請填寫完整');
+            db.ref('pending_users/'+acc).set({ acc, nick, pwd }).then(() => {
+                alert('已提交！請聯絡岳笙審核。');
+                toggleAuth(false);
             });
         };
 
@@ -163,13 +160,11 @@
             document.getElementById('authPage').classList.add('hidden');
             document.getElementById('mainPage').classList.remove('hidden');
             document.getElementById('userHello').innerText = curUser.nick;
-            document.getElementById('newNick').value = curUser.nick;
             if(curUser.role === 'admin') {
                 document.getElementById('adminQuickLink').classList.remove('hidden');
                 loadAdminData();
-                loadUserList();
             }
-            loadLogs();
+            loadLogs(); checkTime();
         }
 
         window.previewImage = () => {
@@ -178,14 +173,13 @@
         };
 
         window.handleImageCheckin = () => {
-            const fileInput = document.getElementById('imgInput');
-            const file = fileInput.files[0];
-            if(!file) return alert('請先選取截圖檔案');
+            const file = document.getElementById('imgInput').files[0];
+            if(!file) return alert('請選取檔案');
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = (e) => {
                 sendRecord('拍照打卡', e.target.result);
-                fileInput.value = "";
-                document.getElementById('fileNameDisplay').innerText = "點擊選取或拍攝截圖";
+                document.getElementById('imgInput').value = "";
+                document.getElementById('fileNameDisplay').innerText = "選取或拍攝截圖";
             };
             reader.readAsDataURL(file);
         };
@@ -194,66 +188,52 @@
             db.ref('attendance_records').push({
                 user: curUser.acc, nick: curUser.nick, type, detail,
                 time: new Date().toLocaleString('zh-TW', {hour12:false})
-            }).then(() => alert('已成功送出紀錄！'));
+            }).then(() => alert('已送出！'));
         };
 
         function loadLogs() {
             db.ref('attendance_records').limitToLast(50).on('value', snap => {
-                let h = ""; let all = "";
-                const list = []; snap.forEach(c => list.push(c.val()));
+                let p = ""; let a = ""; const list = [];
+                snap.forEach(c => list.push(c.val()));
                 list.reverse().forEach(r => {
-                    const isImg = r.detail.startsWith('data:image');
-                    const display = isImg ? `<img src="${r.detail}" class="record-img" onclick="window.open(this.src)">` : r.detail;
-                    const line = `<div class="p-3 border-b bg-white rounded-xl shadow-sm mb-2">
-                        <div class="flex justify-between font-bold text-blue-600 mb-1"><span>${r.nick}</span> <span class="text-gray-300 text-[10px]">${r.time}</span></div>
-                        <div class="text-xs text-gray-500 mb-2">${r.type}</div>
-                        <div>${display}</div>
+                    const isImg = r.detail && r.detail.startsWith('data:image');
+                    const display = isImg ? `<img src="${r.detail}" class="record-img" onclick="window.open(this.src)">` : `<p class="bg-gray-50 p-2 rounded">${r.detail}</p>`;
+                    const card = `<div class="p-4 bg-white rounded-2xl shadow-sm mb-3 border border-gray-100">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-bold text-blue-600">${r.nick}</span>
+                            <span class="text-[10px] text-gray-400">${r.time}</span>
+                        </div>
+                        <div class="text-xs font-bold text-gray-400 mb-2">● ${r.type}</div>
+                        ${display}
                     </div>`;
-                    if(r.user === curUser.acc) h += line;
-                    all += line;
+                    if(r.user === curUser.acc) p += card;
+                    a += card;
                 });
-                document.getElementById('personalList').innerHTML = h || "尚無任何紀錄";
-                document.getElementById('adminAllList').innerHTML = all;
+                document.getElementById('personalList').innerHTML = p || "尚無紀錄";
+                document.getElementById('adminAllList').innerHTML = a || "目前尚無人打卡";
             });
         }
 
-        function loadUserList() {
-            db.ref('users').on('value', snap => {
-                let h = ""; let count = 0;
-                snap.forEach(c => {
-                    const u = c.val();
-                    if(u.acc === 'admin') return;
-                    count++;
-                    h += `<div class="flex justify-between items-center bg-white p-2 rounded-lg border text-xs mb-1">
-                        <span><b>${u.nick}</b> (${u.acc})</span>
-                        <button onclick="deleteUser('${u.acc}')" class="text-red-500 text-[10px] border border-red-200 px-2 py-0.5 rounded">除名</button>
-                    </div>`;
-                });
-                document.getElementById('userList').innerHTML = h || "目前無成員";
-                document.getElementById('userCount').innerText = count;
-            });
-        }
-
-        window.deleteUser = (acc) => {
-            if(confirm(`確定要將帳號 ${acc} 從家族名單中移除嗎？`)) {
-                db.ref('users/' + acc).remove().then(() => alert('已移除該成員'));
-            }
+        window.showAdmin = () => { 
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.getElementById('admin').classList.add('active'); 
+        };
+        window.closeAdmin = () => { 
+            document.getElementById('admin').classList.remove('active');
+            document.getElementById('schedule').classList.add('active'); 
         };
 
-        window.showAdmin = () => { document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); document.getElementById('admin').classList.add('active'); };
-        window.closeAdmin = () => { document.getElementById('admin').classList.remove('active'); document.getElementById('schedule').classList.add('active'); };
-        
         function loadAdminData() {
             db.ref('pending_users').on('value', snap => {
                 let h = "";
                 snap.forEach(c => {
                     const u = c.val();
-                    h += `<div class="p-3 bg-red-50 rounded-xl flex justify-between items-center text-xs">
+                    h += `<div class="p-3 bg-red-50 rounded-xl flex justify-between items-center text-xs mb-2">
                         <span><b>${u.nick}</b> (${u.acc})</span>
-                        <button onclick="approve('${u.acc}')" class="bg-red-500 text-white px-3 py-1 rounded-lg shadow-sm">准許</button>
+                        <button onclick="approve('${u.acc}')" class="bg-red-500 text-white px-3 py-1 rounded-lg">准許</button>
                     </div>`;
                 });
-                document.getElementById('pendingList').innerHTML = h || "目前無新申請";
+                document.getElementById('pendingList').innerHTML = h || "<p class='text-xs text-gray-400'>目前無待審核申請</p>";
             });
         }
 
@@ -263,18 +243,10 @@
             });
         };
 
-        window.doUpdateName = () => {
-            const n = document.getElementById('newNick').value.trim();
-            if(!n || curUser.acc === 'admin') return;
-            db.ref('users/'+curUser.acc+'/nick').set(n).then(() => location.reload());
-        };
-
         const sel = document.getElementById('timeInput');
         for(let i=0; i<24; i++){
-            let h = i < 10 ? '0'+i : i;
-            let nH = (i+1)%24; nH = nH < 10 ? '0'+nH : nH;
-            let opt = `${h}:00-${nH}:00`;
-            sel.innerHTML += `<option value="${opt}">${opt}</option>`;
+            let h = i < 10 ? '0'+i : i; let nH = (i+1)%24; nH = nH < 10 ? '0'+nH : nH;
+            let opt = `${h}:00-${nH}:00`; sel.innerHTML += `<option value="${opt}">${opt}</option>`;
         }
 
         document.querySelectorAll('.nav-btn').forEach(btn => {

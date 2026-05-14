@@ -3,195 +3,197 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>排檔表管理系統 v2.1 - 岳笙專業版</title>
+    <title>岳笙團隊 - 雲端管理系統 v3.0</title>
+    <!-- 引入 Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#165DFF', success: '#00B42A', danger: '#F53F3F', warning: '#FF7D00', dark: '#1D2129'
-                    }
-                }
-            }
-        }
+        // --- ！！！請在此處填入你剛剛在 Firebase 申請的資訊 ！！！ ---
+        const firebaseConfig = {
+            apiKey: "你的APIKEY",
+            authDomain: "你的ID.firebaseapp.com",
+            databaseURL: "https://你的ID.firebaseio.com",
+            projectId: "你的ID",
+            storageBucket: "你的ID.appspot.com",
+            messagingSenderId: "你的發送ID",
+            appId: "你的APPID"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
     </script>
-    <style type="text/tailwindcss">
-        @layer utilities {
-            .btn-hover { @apply transition-all duration-300 hover:shadow-lg active:scale-95; }
-            .card-shadow { box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05); }
-            .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
-            @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        }
-    </style>
 </head>
-<body class="bg-gray-50 min-h-screen font-sans text-dark">
-    <div id="app" class="container mx-auto px-4 py-6 max-w-6xl">
-        <!-- 登入頁面 -->
-        <div id="loginPage" class="flex items-center justify-center min-h-[80vh]">
-            <div class="bg-white rounded-2xl card-shadow p-8 w-full max-w-md animate-fade-in">
-                <div class="text-center mb-8">
-                    <h1 class="text-3xl font-bold text-dark mb-2"><i class="fa fa-calendar-check-o text-primary mr-2"></i>排檔表系統</h1>
-                    <p class="text-gray-500 text-sm">工時管理與打卡審核</p>
-                </div>
-                <!-- 修正重點：添加 onsubmit="return false;" 防止頁面跳轉 -->
-                <form id="loginForm" onsubmit="return false;" class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">帳號</label>
-                        <input type="text" id="loginUsername" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 outline-none" placeholder="admin" required>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">密碼</label>
-                        <input type="password" id="loginPassword" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 outline-none" placeholder="admin123" required>
-                    </div>
-                    <button id="loginBtn" type="button" class="w-full bg-primary text-white py-3 rounded-lg font-medium btn-hover flex items-center justify-center">
-                        <i class="fa fa-sign-in mr-2"></i>登入系統
-                    </button>
-                </form>
+<body class="bg-gray-100 min-h-screen text-gray-800">
+    <div id="app" class="max-w-4xl mx-auto px-4 py-6">
+        
+        <!-- 1. 登入/註冊 切換介面 -->
+        <div id="authPage" class="bg-white p-8 rounded-2xl shadow-xl mt-10">
+            <h2 id="authTitle" class="text-2xl font-bold text-center mb-6">岳笙團隊登入</h2>
+            <div class="space-y-4">
+                <input id="uAccount" type="text" placeholder="輸入帳號" class="w-full p-4 border rounded-xl">
+                <input id="uPassword" type="password" placeholder="輸入密碼" class="w-full p-4 border rounded-xl">
+                <input id="uNickname" type="text" placeholder="輸入你的名字/藝名 (註冊時填寫)" class="w-full p-4 border rounded-xl hidden">
+                <button id="btnPrimary" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold">登入系統</button>
+                <button id="btnToggle" class="w-full text-blue-500 text-sm">還沒有帳號？點此註冊</button>
             </div>
         </div>
 
-        <!-- 主系統 (其餘代碼保持不變，已優化) -->
+        <!-- 2. 主系統內容 (隱藏) -->
         <div id="mainPage" class="hidden animate-fade-in">
-            <header class="bg-white rounded-xl card-shadow p-4 mb-6 flex justify-between items-center">
-                <div class="flex items-center gap-4">
-                    <h1 class="text-xl font-bold text-primary"><i class="fa fa-calendar mr-2"></i>管理中心</h1>
-                    <span id="currentTime" class="hidden md:inline text-gray-500 text-xs bg-gray-100 px-3 py-1 rounded-full"></span>
+            <!-- 頂部資訊 -->
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h1 class="text-xl font-bold text-blue-600">管理中心</h1>
+                    <p class="text-xs text-gray-400">目前使用者：<span id="displayUser" class="font-bold"></span></p>
                 </div>
-                <div class="flex items-center gap-4">
-                    <div id="userInfo" class="text-sm font-bold flex items-center gap-2"></div>
-                    <button id="logoutBtn" class="text-gray-400 hover:text-danger p-2"><i class="fa fa-power-off text-lg"></i></button>
-                </div>
-            </header>
-            <nav class="flex bg-white rounded-xl card-shadow mb-6 overflow-hidden">
-                <button class="flex-1 py-4 text-sm font-bold border-b-2 border-primary text-primary tab-btn" data-target="dashboard">儀表板</button>
-                <button class="flex-1 py-4 text-sm font-medium text-gray-500 tab-btn" data-target="checkin">打卡回報</button>
-                <button id="adminTabBtn" class="flex-1 py-4 text-sm font-medium text-gray-500 tab-btn hidden" data-target="admin">審核後台</button>
+                <button onclick="location.reload()" class="bg-gray-200 p-2 rounded-lg"><i class="fa fa-sign-out"></i></button>
+            </div>
+
+            <!-- 功能分頁 -->
+            <nav class="flex bg-white rounded-xl shadow-sm mb-6 overflow-hidden">
+                <button class="flex-1 py-4 font-bold nav-btn border-b-2 border-blue-600" data-tab="schedule">排班預約</button>
+                <button class="flex-1 py-4 font-bold nav-btn" data-tab="checkin">現場打卡</button>
+                <button id="adminOnly" class="flex-1 py-4 font-bold nav-btn text-red-500 hidden" data-tab="report">全體月報表</button>
             </nav>
-            <main>
-                <section id="dashboard" class="tab-content animate-fade-in">
-                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                        <div class="bg-white p-5 rounded-xl card-shadow border-l-4 border-primary">
-                            <p class="text-xs text-gray-500 mb-1">本月通過工時</p>
-                            <p id="statHours" class="text-2xl font-bold text-primary">0h 0m</p>
-                        </div>
-                        <div class="bg-white p-5 rounded-xl card-shadow border-l-4 border-warning">
-                            <p class="text-xs text-gray-500 mb-1">等待審核</p>
-                            <p id="statPending" class="text-2xl font-bold text-warning">0</p>
-                        </div>
+
+            <!-- 排班區 -->
+            <section id="tab-schedule" class="tab-sec">
+                <div class="bg-white p-6 rounded-2xl shadow-sm mb-4">
+                    <h3 class="font-bold mb-4">申請預約時段</h3>
+                    <input type="date" id="inputDate" class="w-full p-3 border rounded-lg mb-3">
+                    <select id="inputTime" class="w-full p-3 border rounded-lg mb-4">
+                        <option value="20:00-21:00">20:00 - 21:00</option>
+                        <option value="21:00-22:00">21:00 - 22:00</option>
+                        <option value="22:00-23:00">22:00 - 23:00</option>
+                    </select>
+                    <button onclick="submitSchedule()" class="w-full bg-blue-600 text-white py-3 rounded-lg">送出審核</button>
+                </div>
+                <div id="myScheduleList" class="space-y-2 text-sm"></div>
+            </section>
+
+            <!-- 打卡區 -->
+            <section id="tab-checkin" class="tab-sec hidden">
+                <div class="bg-white p-8 rounded-2xl shadow-sm text-center">
+                    <p class="text-gray-500 mb-6">請上傳帶有時間浮水印的截圖</p>
+                    <input type="file" id="imageFile" accept="image/*" class="mb-4">
+                    <button onclick="doCheckin()" class="w-full bg-green-500 text-white py-4 rounded-xl font-bold">確認打卡 (雲端同步)</button>
+                </div>
+            </section>
+
+            <!-- 報表區 (管理員專屬) -->
+            <section id="tab-report" class="tab-sec hidden">
+                <div class="bg-white p-6 rounded-2xl shadow-sm">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold">全體成員當月數據</h3>
+                        <button onclick="exportCSV()" class="text-sm bg-gray-800 text-white px-3 py-1 rounded">導出 CSV 報表</button>
                     </div>
-                    <div class="bg-white p-6 rounded-xl card-shadow">
-                        <h3 class="font-bold mb-4 text-gray-700">最近 5 筆記錄</h3>
-                        <div id="recentList" class="space-y-2 text-sm text-gray-600"></div>
-                    </div>
-                </section>
-                <section id="checkin" class="tab-content hidden animate-fade-in">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-center">
-                        <div class="bg-white p-8 rounded-xl card-shadow">
-                            <h3 class="font-bold text-lg mb-4 text-success">上班打卡</h3>
-                            <button id="checkinBtn" class="w-full py-4 rounded-xl font-bold text-white bg-gray-300">時段未開放</button>
-                        </div>
-                        <div class="bg-white p-8 rounded-xl card-shadow">
-                            <h3 class="font-bold text-lg mb-4 text-danger">下班打卡</h3>
-                            <button id="checkoutBtn" class="w-full py-4 rounded-xl font-bold text-white bg-gray-300">時段未開放</button>
-                        </div>
-                    </div>
-                </section>
-                <section id="admin" class="tab-content hidden animate-fade-in">
-                    <div class="bg-white p-6 rounded-xl card-shadow">
-                        <h3 class="font-bold text-lg mb-4">待審核清單</h3>
-                        <tbody id="adminTableBody"></tbody>
-                    </div>
-                </section>
-            </main>
+                    <div id="reportTable" class="text-sm"></div>
+                </div>
+            </section>
         </div>
     </div>
-    <div id="toastContainer" class="fixed top-5 right-5 z-[100] space-y-3"></div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const db = {
-                getUsers: () => JSON.parse(localStorage.getItem('users')) || [{id:'1', username:'admin', password:'admin123', nickname:'管理員', role:'admin'}],
-                getCheckins: () => JSON.parse(localStorage.getItem('checkins')) || [],
-                saveCheckin: (data) => {
-                    const list = JSON.parse(localStorage.getItem('checkins')) || [];
-                    list.push({ ...data, id: 'rec_' + Date.now(), status: 'pending' });
-                    localStorage.setItem('checkins', JSON.stringify(list));
-                }
-            };
+        let isRegister = false;
+        let currentUser = null;
 
-            let currentUser = null;
+        // 登入/註冊 切換
+        document.getElementById('btnToggle').onclick = () => {
+            isRegister = !isRegister;
+            document.getElementById('authTitle').innerText = isRegister ? '員工帳號註冊' : '岳笙團隊登入';
+            document.getElementById('uNickname').classList.toggle('hidden');
+            document.getElementById('btnPrimary').innerText = isRegister ? '立即註冊' : '登入系統';
+            document.getElementById('btnToggle').innerText = isRegister ? '已有帳號？返回登入' : '還沒有帳號？點此註冊';
+        };
 
-            // 修正：直接針對按鈕點擊處理，防止 Form 預設行為
-            const loginBtn = document.getElementById('loginBtn');
-            loginBtn.onclick = () => {
-                const u = document.getElementById('loginUsername').value.trim();
-                const p = document.getElementById('loginPassword').value;
-                const users = db.getUsers();
-                const user = users.find(x => x.username === u && x.password === p);
+        // 登入與註冊邏輯 (對接 Firebase)
+        document.getElementById('btnPrimary').onclick = async () => {
+            const acc = document.getElementById('uAccount').value.trim();
+            const pwd = document.getElementById('uPassword').value;
+            const nick = document.getElementById('uNickname').value;
 
-                if(user) {
-                    currentUser = user;
-                    document.getElementById('loginPage').classList.add('hidden');
-                    document.getElementById('mainPage').classList.remove('hidden');
-                    document.getElementById('userInfo').innerHTML = `<span>${user.nickname}</span>`;
-                    if(user.role === 'admin') document.getElementById('adminTabBtn').classList.remove('hidden');
-                    startSystem();
-                    updateDashboard();
-                    showToast('登入成功', 'success');
-                } else {
-                    showToast('帳密錯誤', 'danger');
-                }
-            };
-
-            function startSystem() {
-                setInterval(() => {
-                    const now = new Date();
-                    const m = now.getMinutes();
-                    document.getElementById('currentTime').innerText = now.toLocaleString();
-                    toggleBtn('checkinBtn', m >= 0 && m <= 3, 'bg-success', '確認上班');
-                    toggleBtn('checkoutBtn', m >= 58 && m <= 59, 'bg-danger', '確認下班');
-                }, 1000);
+            if (isRegister) {
+                await db.ref('users/' + acc).set({ acc, pwd, nick, role: 'user' });
+                alert('註冊成功，請登入！');
+                location.reload();
+            } else {
+                db.ref('users/' + acc).once('value', (snapshot) => {
+                    const user = snapshot.val();
+                    if (user && user.pwd === pwd) {
+                        currentUser = user;
+                        enterSystem();
+                    } else {
+                        alert('帳密錯誤');
+                    }
+                });
             }
+        };
 
-            function toggleBtn(id, active, color, text) {
-                const btn = document.getElementById(id);
-                if(active) {
-                    btn.className = `w-full py-4 rounded-xl font-bold text-white btn-hover ${color}`;
-                    btn.innerText = text;
-                    btn.disabled = false;
-                } else {
-                    btn.className = `w-full py-4 rounded-xl font-bold text-white bg-gray-300 cursor-not-allowed`;
-                    btn.innerText = '非時段';
-                    btn.disabled = true;
-                }
-            }
+        function enterSystem() {
+            document.getElementById('authPage').classList.add('hidden');
+            document.getElementById('mainPage').classList.remove('hidden');
+            document.getElementById('displayUser').innerText = currentUser.nick;
+            if(currentUser.role === 'admin') document.getElementById('adminOnly').classList.remove('hidden');
+            loadMySchedules();
+        }
 
-            function updateDashboard() {
-                const logs = db.getCheckins().filter(x => x.userId === currentUser.id);
-                document.getElementById('statPending').innerText = logs.filter(x => x.status === 'pending').length;
-                document.getElementById('statHours').innerText = logs.filter(x => x.status === 'approved').length + ' 筆';
-            }
-
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.onclick = () => {
-                    document.querySelectorAll('.tab-btn').forEach(b => b.className = "flex-1 py-4 text-sm font-medium text-gray-500 tab-btn");
-                    btn.className = "flex-1 py-4 text-sm font-bold border-b-2 border-primary text-primary tab-btn";
-                    document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
-                    document.getElementById(btn.dataset.target).classList.remove('hidden');
-                };
+        // 送出排班到雲端
+        async function submitSchedule() {
+            const date = document.getElementById('inputDate').value;
+            const time = document.getElementById('inputTime').value;
+            const ref = db.ref('schedules').push();
+            await ref.set({
+                id: ref.key,
+                user: currentUser.nick,
+                date: date,
+                time: time,
+                status: 'pending'
             });
+            alert('排班申請已上傳雲端');
+            loadMySchedules();
+        }
 
-            function showToast(msg, type) {
-                const t = document.createElement('div');
-                t.className = `${type === 'success' ? 'bg-success' : 'bg-danger'} text-white px-6 py-3 rounded-xl shadow-xl animate-fade-in text-sm font-medium`;
-                t.innerText = msg;
-                document.getElementById('toastContainer').appendChild(t);
-                setTimeout(() => t.remove(), 3000);
-            }
+        // 從雲端載入我的排班
+        function loadMySchedules() {
+            db.ref('schedules').orderByChild('user').equalTo(currentUser.nick).on('value', (snap) => {
+                const data = snap.val();
+                let html = '<h4 class="font-bold text-gray-400 mb-2">我的排班進度</h4>';
+                for(let k in data) {
+                    const s = data[k];
+                    html += `<div class="bg-white p-3 rounded shadow-sm flex justify-between">
+                        <span>${s.date} (${s.time})</span>
+                        <span class="text-blue-500">${s.status}</span>
+                    </div>`;
+                }
+                document.getElementById('myScheduleList').innerHTML = html;
+            });
+        }
 
-            document.getElementById('logoutBtn').onclick = () => location.reload();
+        // 報表生成與匯出 (略縮，可依照需求擴充)
+        function exportCSV() {
+            db.ref('schedules').once('value', (snap) => {
+                let csv = '員工,日期,時段,狀態\n';
+                snap.forEach(child => {
+                    const s = child.val();
+                    csv += `${s.user},${s.date},${s.time},${s.status}\n`;
+                });
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement("a");
+                link.href = URL.createObjectURL(blob);
+                link.download = "岳笙團隊月報表.csv";
+                link.click();
+            });
+        }
+
+        // 分頁切換
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.onclick = () => {
+                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('border-b-2', 'border-blue-600'));
+                btn.classList.add('border-b-2', 'border-blue-600');
+                document.querySelectorAll('.tab-sec').forEach(s => s.classList.add('hidden'));
+                document.getElementById('tab-' + btn.dataset.tab).classList.remove('hidden');
+            };
         });
     </script>
 </body>

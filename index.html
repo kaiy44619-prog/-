@@ -4,10 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>金好家族管理系統</title>
+    <!-- Firebase & Excel 套件 -->
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <style>
         .nav-btn.active { background-color: #2563eb; color: white; }
@@ -21,13 +22,14 @@
 <body class="bg-gray-100 antialiased">
     <div id="app" class="max-w-md mx-auto px-4 py-6">
         
+        <!-- 登入頁面 -->
         <div id="authPage" class="bg-white p-8 rounded-3xl shadow-xl mt-10 text-center">
             <h2 class="text-2xl font-bold mb-6 text-blue-600">金好家族系統</h2>
             <div id="loginForm" class="space-y-4 text-left">
                 <input id="loginAcc" type="text" placeholder="帳號" class="w-full p-4 border rounded-2xl outline-none">
                 <input id="loginPwd" type="password" placeholder="密碼" class="w-full p-4 border rounded-2xl outline-none">
                 <button id="loginBtn" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg active:scale-95 transition">進入系統</button>
-                <p class="text-center text-sm text-gray-400 mt-4 cursor-pointer" onclick="toggleAuth(true)">沒有帳號？成員註冊申請</p>
+                <p class="text-center text-sm text-gray-400 mt-4 cursor-pointer" onclick="toggleAuth(true)">成員註冊申請</p>
             </div>
             <div id="regForm" class="hidden space-y-4 text-left">
                 <p class="text-xs text-red-500 font-bold mb-2">註冊後請聯絡岳笙審核通過</p>
@@ -39,6 +41,7 @@
             </div>
         </div>
 
+        <!-- 主頁面 -->
         <div id="mainPage" class="hidden">
             <div class="flex justify-between items-center mb-4 px-2">
                 <h1 class="text-xl font-bold text-blue-600">Hi, <span id="userHello"></span></h1>
@@ -52,53 +55,52 @@
                 <button class="py-3 rounded-xl font-bold nav-btn" data-target="profile">個人</button>
             </nav>
 
+            <!-- 管理員紅色入口 -->
             <div id="adminQuickLink" class="hidden mb-4 bg-red-600 text-white p-5 rounded-2xl shadow-lg flex justify-between items-center cursor-pointer" onclick="showAdmin()">
-                <div><p class="font-bold text-lg">審核管理後台</p><p class="text-xs opacity-80">成員名單、除名、導出試算表</p></div>
+                <div><p class="font-bold text-lg">審核管理後台</p><p class="text-xs opacity-80">成員名單、除名、導出 Excel</p></div>
                 <i class="fa fa-users text-2xl"></i>
             </div>
 
+            <!-- 打卡區 -->
             <section id="checkin" class="tab-content bg-white p-6 rounded-2xl border text-center">
                 <div id="timeStatus" class="mb-4 p-3 rounded-xl text-xs font-bold bg-gray-100 text-gray-500">檢測時間中...</div>
-                <div class="mb-4">
-                    <label class="block w-full border-2 border-dashed border-gray-300 rounded-2xl p-6 cursor-pointer hover:bg-gray-50 transition">
+                <div class="mb-4 text-left">
+                    <label class="block w-full border-2 border-dashed border-gray-300 rounded-2xl p-6 cursor-pointer hover:bg-gray-50 transition text-center">
                         <i class="fa fa-camera text-3xl text-gray-300 mb-2"></i>
-                        <span id="fileNameDisplay" class="block text-sm text-gray-500 text-center">點擊選取或拍攝截圖</span>
+                        <span id="fileNameDisplay" class="block text-sm text-gray-500">點擊選取或拍攝截圖</span>
                         <input type="file" id="imgInput" accept="image/*" class="hidden" onchange="previewImage()">
                     </label>
                 </div>
                 <button id="checkBtn" onclick="handleImageCheckin()" class="w-full disabled-btn text-white py-4 rounded-xl font-bold shadow-md" disabled>非打卡時段</button>
             </section>
 
+            <!-- 管理員後台 (此處包含報表按鈕) -->
             <section id="admin" class="tab-content bg-white p-6 rounded-2xl border-2 border-red-500 shadow-xl">
                 <div class="flex justify-between items-center mb-6"><h3 class="font-bold text-red-600 text-lg">家族管理後台</h3><button onclick="closeAdmin()" class="text-xs text-gray-400">返回</button></div>
                 
-                <h4 class="font-bold text-sm mb-3 text-gray-600">新註冊審核</h4>
-                <div id="pendingList" class="space-y-2 mb-6"></div>
-                <hr class="my-4">
-                
-                <h4 class="font-bold text-sm mb-3 text-gray-600">家族成員清單 (<span id="userCount">0</span>)</h4>
-                <div id="userList" class="space-y-2 mb-6 max-h-40 overflow-y-auto bg-gray-50 p-2 rounded-xl"></div>
-                <hr class="my-4">
-                
-                <h4 class="font-bold text-sm mb-3 text-gray-600 text-center">數據報表管理</h4>
-                <button onclick="exportToExcel()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-md mb-6 flex justify-center items-center gap-2 active:scale-95 transition text-sm">
-                    <i class="fa fa-file-excel-o"></i> 導出 45 天內打卡試算表
+                <h4 class="font-bold text-sm mb-3 text-gray-600">數據報表匯出</h4>
+                <button onclick="exportToExcel()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg mb-6 flex justify-center items-center gap-2 active:scale-95 transition">
+                    <i class="fa fa-file-excel-o"></i> 導出 45 天考勤試算表
                 </button>
+
+                <h4 class="font-bold text-sm mb-3 text-gray-600">待審核申請</h4>
+                <div id="pendingList" class="space-y-2 mb-6"></div>
                 
-                <h4 class="font-bold text-sm mb-3 text-gray-500 text-center">近 45 天全體紀錄 (含圖)</h4>
+                <h4 class="font-bold text-sm mb-3 text-gray-600">家族成員 (<span id="userCount">0</span>)</h4>
+                <div id="userList" class="space-y-2 mb-6 max-h-40 overflow-y-auto bg-gray-50 p-2 rounded-xl border"></div>
+                
+                <h4 class="font-bold text-sm mb-3 text-gray-500 text-center">全體紀錄 (近 45 天)</h4>
                 <div id="adminAllList" class="space-y-4 max-h-[500px] overflow-y-auto"></div>
             </section>
 
             <section id="schedule" class="tab-content active bg-white p-6 rounded-2xl border">
-                <h3 class="font-bold mb-4">預約排班</h3>
                 <input type="date" id="dateInput" class="w-full p-4 border rounded-xl mb-3 bg-gray-50 text-sm">
                 <select id="timeInput" class="w-full p-4 border rounded-xl mb-4 bg-gray-50 text-sm"></select>
                 <button onclick="sendRecord('預約排班', document.getElementById('dateInput').value + ' ' + document.getElementById('timeInput').value)" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold">送出預約</button>
             </section>
             <section id="history" class="tab-content bg-white p-4 rounded-2xl border min-h-[300px]"><div id="personalList" class="space-y-4"></div></section>
             <section id="profile" class="tab-content bg-white p-6 rounded-2xl border text-center">
-                <h3 class="font-bold mb-4 text-sm text-gray-500">修改暱稱</h3>
-                <input id="newNick" type="text" class="w-full p-4 border rounded-xl mb-4 text-sm" placeholder="輸入新名稱">
+                <input id="newNick" type="text" class="w-full p-4 border rounded-xl mb-4 text-sm" placeholder="輸入新暱稱">
                 <button onclick="doUpdateName()" class="w-full bg-black text-white py-4 rounded-xl font-bold">儲存修改</button>
             </section>
         </div>
@@ -115,22 +117,19 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         let curUser = null;
-        let globalRecords = []; // 暫存 45 天內的資料以便導出
+        let globalRecords = [];
 
-        // 打卡時段精準檢查 (58分 - 03分)
         function checkTime() {
             const m = new Date().getMinutes();
             const canWork = (m >= 58 || m <= 3);
             const btn = document.getElementById('checkBtn');
             const status = document.getElementById('timeStatus');
             if(btn && status) {
-                if(canWork) {
-                    btn.disabled = false; btn.innerText = "提交截圖打卡"; btn.className = "w-full bg-green-500 text-white py-4 rounded-xl font-bold shadow-lg active:scale-95 transition";
-                    status.innerText = "● 打卡通道開放中 (58分-03分)"; status.className = "mb-4 p-3 rounded-xl text-xs font-bold bg-green-50 text-green-600";
-                } else {
-                    btn.disabled = true; btn.innerText = "非打卡時段"; btn.className = "w-full disabled-btn text-white py-4 rounded-xl font-bold shadow-md";
-                    status.innerText = "● 非打卡時段 (僅限 58分-03分)"; status.className = "mb-4 p-3 rounded-xl text-xs font-bold bg-gray-100 text-gray-500";
-                }
+                btn.disabled = !canWork;
+                btn.innerText = canWork ? "提交截圖打卡" : "非打卡時段";
+                btn.className = canWork ? "w-full bg-green-500 text-white py-4 rounded-xl font-bold shadow-lg active:scale-95 transition" : "w-full disabled-btn text-white py-4 rounded-xl font-bold shadow-md";
+                status.innerText = canWork ? "● 打卡通道開放中 (58-03)" : "● 非打卡時段 (僅限 58分-03分)";
+                status.className = canWork ? "mb-4 p-3 rounded-xl text-xs font-bold bg-green-50 text-green-600" : "mb-4 p-3 rounded-xl text-xs font-bold bg-gray-100 text-gray-500";
             }
         }
         setInterval(checkTime, 5000);
@@ -148,7 +147,7 @@
                 db.ref('users/'+acc).once('value', snap => {
                     const d = snap.val();
                     if(d && d.pwd === pwd) loginOk({...d, role:'user'});
-                    else alert('帳密錯誤或尚未審核通過');
+                    else alert('帳密錯誤或未核准');
                 });
             }
         };
@@ -158,10 +157,7 @@
             const nick = document.getElementById('regNick').value.trim();
             const pwd = document.getElementById('regPwd').value.trim();
             if(!acc || !nick || !pwd) return alert('請填寫完整');
-            db.ref('pending_users/'+acc).set({ acc, nick, pwd, regTime: Date.now() }).then(() => {
-                alert('註冊申請已提交！請聯絡岳笙審核。');
-                toggleAuth(false);
-            });
+            db.ref('pending_users/'+acc).set({ acc, nick, pwd, timestamp: Date.now() }).then(() => { alert('已提交！請聯絡岳笙審核。'); toggleAuth(false); });
         };
 
         function loginOk(u) {
@@ -178,12 +174,12 @@
 
         window.previewImage = () => {
             const file = document.getElementById('imgInput').files[0];
-            if(file) document.getElementById('fileNameDisplay').innerText = "已選取檔案：" + file.name;
+            if(file) document.getElementById('fileNameDisplay').innerText = "已選取：" + file.name;
         };
 
         window.handleImageCheckin = () => {
             const file = document.getElementById('imgInput').files[0];
-            if(!file) return alert('請先選取圖片或拍照');
+            if(!file) return alert('請選取截圖');
             const reader = new FileReader();
             reader.onload = (e) => {
                 sendRecord('拍照打卡', e.target.result);
@@ -198,82 +194,46 @@
                 user: curUser.acc, nick: curUser.nick, type, detail,
                 timestamp: Date.now(),
                 time: new Date().toLocaleString('zh-TW', {hour12:false})
-            }).then(() => alert('送出成功！'));
+            }).then(() => alert('成功送出！'));
         };
 
-        // 核心顯示與過濾邏輯
         function loadLogs() {
-            const timeLimit = Date.now() - (45 * 24 * 60 * 60 * 1000);
-            db.ref('attendance_records').orderByChild('timestamp').startAt(timeLimit).on('value', snap => {
+            const limit = Date.now() - (45 * 24 * 60 * 60 * 1000);
+            db.ref('attendance_records').orderByChild('timestamp').startAt(limit).on('value', snap => {
                 let p = ""; let a = ""; globalRecords = [];
                 const list = [];
-                snap.forEach(c => {
-                    const val = c.val();
-                    list.push(val);
-                    globalRecords.push(val); // 存入全域變數供 Excel 使用
-                });
+                snap.forEach(c => { const v = c.val(); list.push(v); globalRecords.push(v); });
                 list.reverse().forEach(r => {
                     const isImg = r.detail && r.detail.startsWith('data:image');
-                    const display = isImg ? `<img src="${r.detail}" class="record-img shadow-sm" loading="lazy" onclick="window.open(this.src)">` : `<div class="bg-gray-50 p-2 rounded text-gray-500">${r.detail}</div>`;
+                    const display = isImg ? `<img src="${r.detail}" class="record-img" loading="lazy" onclick="window.open(this.src)">` : `<div class="bg-gray-50 p-2 rounded text-gray-500">${r.detail}</div>`;
                     const card = `<div class="p-4 bg-white rounded-2xl shadow-sm mb-3 border border-gray-100 text-[11px]">
                         <div class="flex justify-between items-center mb-1"><span class="font-bold text-blue-600">${r.nick}</span><span class="text-gray-300 font-normal">${r.time}</span></div>
-                        <div class="text-gray-400 mb-2">● ${r.type}</div>${display}
+                        <div class="text-gray-400 mb-2">${r.type}</div>${display}
                     </div>`;
                     if(r.user === curUser.acc) p += card;
                     a += card;
                 });
-                document.getElementById('personalList').innerHTML = p || "近期無紀錄";
-                document.getElementById('adminAllList').innerHTML = a || "近期無紀錄";
+                document.getElementById('personalList').innerHTML = p || "目前無紀錄";
+                document.getElementById('adminAllList').innerHTML = a || "目前無紀錄";
             });
         }
 
-        // 精準一鍵導出試算表函數 (含當天次數統計、日期時間分離)
         window.exportToExcel = () => {
-            if (globalRecords.length === 0) return alert('目前沒有 45 天內的打卡紀錄可供導出！');
-            
-            // 建立統計字典，用來計算每個人在「特定日期」打了幾次卡
+            if (globalRecords.length === 0) return alert('無紀錄可導出');
             const dateCountMap = {};
             globalRecords.forEach(r => {
-                if(!r.time) return;
-                const datePart = r.time.split(' ')[0]; // 取得 YYYY/M/D
-                const key = `${r.user}_${datePart}`;
-                dateCountMap[key] = (dateCountMap[key] || 0) + 1;
+                const d = r.time ? r.time.split(' ')[0] : "未知";
+                const k = `${r.user}_${d}`;
+                dateCountMap[k] = (dateCountMap[k] || 0) + 1;
             });
-
-            // 格式化 Excel 內容，排除 Base64 圖片亂碼，維持試算表乾淨
-            const excelData = globalRecords.map(r => {
-                let dateStr = "";
-                let timeStr = "";
-                if(r.time) {
-                    const parts = r.time.split(' ');
-                    dateStr = parts[0] || "";
-                    timeStr = parts[1] || "";
-                }
-                const datePart = dateStr;
-                const key = `${r.user}_${datePart}`;
-                const totalCountOnThatDay = dateCountMap[key] || 1;
-
-                return {
-                    "成員暱稱": r.nick || "",
-                    "帳號": r.user || "",
-                    "打卡日期": dateStr,
-                    "打卡時間": timeStr,
-                    "當天累計打卡次數": totalCountOnThatDay,
-                    "項目": r.type || ""
-                };
+            const data = globalRecords.map(r => {
+                const t = r.time ? r.time.split(' ') : ["未知", "未知"];
+                return { "成員": r.nick, "帳號": r.user, "日期": t[0], "時間": t[1], "當天次數": dateCountMap[`${r.user}_${t[0]}`], "項目": r.type };
             });
-
-            // 排序：先按日期降序，再按暱稱排序，符合報表閱讀習慣
-            excelData.sort((b, a) => a.打卡日期.localeCompare(b.打卡日期) || b.成員暱稱.localeCompare(a.成員暱稱));
-
-            // 生成並下載 Excel 檔案
-            const worksheet = XLSX.utils.json_to_sheet(excelData);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "打卡考勤報表");
-            
-            // 檔名加上今天日期，方便你管理
-            const today = new Date().toLocaleDateString('zh-TW').replace(/\//g, '-');
-            XLSX.writeFile(workbook, `金好家族打卡報表_${today}.xlsx`);
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "報表");
+            XLSX.writeFile(wb, `金好家族報表_${new Date().toLocaleDateString().replace(/\//g,'-')}.xlsx`);
         };
 
         function loadUserList() {
@@ -281,9 +241,9 @@
                 let h = ""; let count = 0;
                 snap.forEach(c => {
                     const u = c.val(); if(u.acc === 'admin') return; count++;
-                    h += `<div class="flex justify-between items-center bg-white p-3 rounded-xl border mb-2 text-xs shadow-sm">
-                        <span><b>${u.nick}</b> <small class="text-gray-300">(${u.acc})</small></span>
-                        <button onclick="deleteUser('${u.acc}')" class="text-red-500 border border-red-100 px-3 py-1 rounded-lg active:bg-red-50">除名</button>
+                    h += `<div class="flex justify-between items-center bg-white p-3 rounded-xl border mb-2 text-xs">
+                        <span><b>${u.nick}</b> (${u.acc})</span>
+                        <button onclick="deleteUser('${u.acc}')" class="text-red-500 border px-2 py-1 rounded">除名</button>
                     </div>`;
                 });
                 document.getElementById('userList').innerHTML = h;
@@ -291,7 +251,7 @@
             });
         }
 
-        window.deleteUser = (acc) => { if(confirm(`確定要除名 ${acc} 嗎？此操作不可恢復。`)) db.ref('users/'+acc).remove(); };
+        window.deleteUser = (acc) => { if(confirm(`確定除名 ${acc}？`)) db.ref('users/'+acc).remove(); };
         window.showAdmin = () => { document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); document.getElementById('admin').classList.add('active'); };
         window.closeAdmin = () => { document.getElementById('admin').classList.remove('active'); document.getElementById('schedule').classList.add('active'); };
         
@@ -301,11 +261,11 @@
                 snap.forEach(c => {
                     const u = c.val();
                     h += `<div class="p-4 bg-red-50 rounded-2xl flex justify-between items-center text-xs mb-3 shadow-sm">
-                        <span><b>${u.nick}</b> <small class="text-gray-400">(${u.acc})</small></span>
-                        <button onclick="approve('${u.acc}')" class="bg-red-500 text-white px-4 py-2 rounded-xl font-bold shadow-md">准許加入</button>
+                        <span><b>${u.nick}</b> (${u.acc})</span>
+                        <button onclick="approve('${u.acc}')" class="bg-red-500 text-white px-4 py-2 rounded-xl font-bold">准許</button>
                     </div>`;
                 });
-                document.getElementById('pendingList').innerHTML = h || "<p class='text-xs text-gray-400 text-center'>目前沒有待審核的申請</p>";
+                document.getElementById('pendingList').innerHTML = h || "目前無申請";
             });
         }
 
@@ -320,14 +280,12 @@
             if(n && curUser.acc !== 'admin') db.ref('users/'+curUser.acc+'/nick').set(n).then(() => location.reload());
         };
 
-        // 初始化時間下拉選單
         const sel = document.getElementById('timeInput');
         for(let i=0; i<24; i++){
             let h = i < 10 ? '0'+i : i; let nH = (i+1)%24; nH = nH < 10 ? '0'+nH : nH;
             let opt = `${h}:00 - ${nH}:00`; sel.innerHTML += `<option value="${opt}">${opt}</option>`;
         }
 
-        // 導航切換
         document.querySelectorAll('.nav-btn').forEach(btn => {
             btn.onclick = () => {
                 document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));

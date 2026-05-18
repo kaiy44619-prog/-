@@ -48,7 +48,7 @@
                 <button onclick="location.reload()" class="text-xs bg-gray-200 px-3 py-1 rounded text-gray-500">登出</button>
             </div>
 
-            <!-- 動態導覽列 (管理員登入會自動生成第5個選單) -->
+            <!-- 動態導覽列 -->
             <nav id="mainNav" class="grid grid-cols-4 bg-white rounded-2xl shadow-sm mb-4 p-1 border text-sm">
                 <button class="py-3 rounded-xl font-bold nav-btn active" data-target="schedule">預約</button>
                 <button class="py-3 rounded-xl font-bold nav-btn" data-target="checkin">打卡</button>
@@ -56,7 +56,7 @@
                 <button class="py-3 rounded-xl font-bold nav-btn" data-target="profile">個人</button>
             </nav>
 
-            <!-- 預約排班區塊 (鎖定三天內、限制重複預約) -->
+            <!-- 預約排班區塊 -->
             <section id="schedule" class="tab-content active bg-white p-6 rounded-2xl border">
                 <h3 class="font-bold mb-2 text-sm text-gray-700">1. 選擇預約日期 (僅限3天內)</h3>
                 <input type="date" id="dateInput" class="w-full p-4 border rounded-xl mb-4 bg-gray-50 text-sm font-bold" onchange="updateTimeOptions()">
@@ -95,7 +95,7 @@
                 <button onclick="doUpdateName()" class="w-full bg-black text-white py-4 rounded-xl font-bold">儲存修改</button>
             </section>
 
-            <!-- 管理員獨立切換選單 (安全隱蔽，不在頁面上方佔位) -->
+            <!-- 管理員獨立切換選單 (新增強製刪除任何排班功能) -->
             <section id="admin" class="tab-content bg-white p-6 rounded-2xl border-2 border-red-500 shadow-xl">
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="font-bold text-red-600 text-lg">家族管理後台</h3>
@@ -113,7 +113,7 @@
                 <h4 class="font-bold text-sm mb-3 text-gray-600">家族成員 (<span id="userCount">0</span>)</h4>
                 <div id="userList" class="space-y-2 mb-6 max-h-40 overflow-y-auto bg-gray-50 p-2 rounded-xl border"></div>
                 
-                <h4 class="font-bold text-sm mb-3 text-gray-500 text-center">全體紀錄 (近 45 天)</h4>
+                <h4 class="font-bold text-sm mb-3 text-red-600"><i class="fa fa-exclamation-triangle"></i> 全體動態管理（可強制刪除排班）</h4>
                 <div id="adminAllList" class="space-y-4 max-h-[500px] overflow-y-auto"></div>
             </section>
         </div>
@@ -132,12 +132,9 @@
         let curUser = null;
         let globalRecords = [];
 
-        // 【優化1】動態計算三天日期限制限制 (今天、明天、後天)
         function initDateRange() {
             const today = new Date();
-            const day2 = new Date(Date.now() + 24 * 60 * 60 * 1000);
             const day3 = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
-            
             const formatDate = (d) => d.toLocaleDateString('zh-TW', {year:'numeric',month:'2-digit',day:'2-digit'}).replace(/\//g,'-');
             
             const minStr = formatDate(today);
@@ -196,12 +193,11 @@
             document.getElementById('mainPage').classList.remove('hidden');
             document.getElementById('userHello').innerText = curUser.nick;
             
-            // 【優化3】如果是管理員，動態重組五等分導覽列，讓選單俐落漂亮
             if(curUser.role === 'admin') {
                 const nav = document.getElementById('mainNav');
                 nav.className = "grid grid-cols-5 bg-white rounded-2xl shadow-sm mb-4 p-1 border text-sm";
                 nav.innerHTML += `<button class="py-3 rounded-xl font-bold nav-btn border border-red-100 text-red-600" data-target="admin"><i class="fa fa-cog"></i> 管理</button>`;
-                bindNavEvents(); // 重新載入事件綁定
+                bindNavEvents(); 
                 loadAdminData(); loadUserList();
             }
             initDateRange();
@@ -281,7 +277,6 @@
             });
         }
 
-        // 【優化2】送出預約防呆驗證：阻斷同一人、同日期、同時間重複卡位
         window.submitSchedule = () => {
             const d = document.getElementById('dateInput').value;
             const t = document.getElementById('timeInput').value;
@@ -290,7 +285,6 @@
 
             const targetDetail = `${d} ${t}`;
             
-            // 精準掃描該帳號名下所有歷史紀錄
             db.ref('attendance_records').orderByChild('user').equalTo(curUser.acc).once('value', snap => {
                 let isDuplicated = false;
                 snap.forEach(child => {
@@ -317,6 +311,15 @@
             }
         };
 
+        // 管理員後台專用的強制刪除功能
+        window.adminDeleteRecord = (key, nick, detail) => {
+            if(confirm(`⚠️ 廳長權限確認：\n確定要強制強制刪除「${nick}」的排班：\n【${detail}】嗎？`)) {
+                db.ref('attendance_records/' + key).remove().then(() => {
+                    alert('已成功強制移除該成員排班！');
+                });
+            }
+        };
+
         function loadLogs() {
             const limit = Date.now() - (45 * 24 * 60 * 60 * 1000);
             db.ref('attendance_records').orderByChild('timestamp').startAt(limit).on('value', snap => {
@@ -331,12 +334,32 @@
                 list.reverse().forEach(r => {
                     const isImg = r.detail && r.detail.startsWith('data:image');
                     const display = isImg ? `<img src="${r.detail}" class="record-img" loading="lazy" onclick="window.open(this.src)">` : `<div class="bg-gray-50 p-2 rounded text-gray-500 font-bold">${r.detail}</div>`;
+                    
+                    // 個人紀錄排版
                     const card = `<div class="p-4 bg-white rounded-2xl shadow-sm mb-3 border border-gray-100 text-[11px]">
                         <div class="flex justify-between items-center mb-1"><span class="font-bold text-blue-600">${r.nick}</span><span class="text-gray-300 font-normal">${r.time}</span></div>
                         <div class="text-gray-400 mb-2 font-bold">${r.type}</div>${display}
                     </div>`;
                     if(r.user === curUser.acc) p += card;
-                    a += card;
+
+                    // 管理員後台全體紀錄排版（如果是預約排班，增加刪除按鈕）
+                    let adminDeleteBtn = "";
+                    if(r.type === '預約排班') {
+                        adminDeleteBtn = `<button onclick="adminDeleteRecord('${r.key}', '${r.nick}', '${r.detail}')" class="text-[10px] bg-red-50 text-red-600 border border-red-200 px-2 py-1 rounded-lg font-bold hover:bg-red-100 transition">強制刪除排班</button>`;
+                    }
+
+                    const adminCard = `<div class="p-4 bg-white rounded-2xl shadow-sm mb-3 border border-gray-100 text-[11px]">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="font-bold text-gray-700">${r.nick} <span class="text-gray-400 font-normal">(${r.user})</span></span>
+                            <span class="text-gray-300 font-normal">${r.time}</span>
+                        </div>
+                        <div class="flex justify-between items-center mt-1">
+                            <span class="text-blue-500 font-bold">${r.type}</span>
+                            ${adminDeleteBtn}
+                        </div>
+                        <div class="mt-2">${display}</div>
+                    </div>`;
+                    a += adminCard;
                 });
                 document.getElementById('personalList').innerHTML = p || "目前無紀錄";
                 document.getElementById('adminAllList').innerHTML = a || "目前無紀錄";
@@ -404,7 +427,6 @@
             if(n && curUser.acc !== 'admin') db.ref('users/'+curUser.acc+'/nick').set(n).then(() => location.reload());
         };
 
-        // 綁定導航列切換按鈕事件
         function bindNavEvents() {
             document.querySelectorAll('.nav-btn').forEach(btn => {
                 btn.onclick = () => {

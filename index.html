@@ -45,11 +45,13 @@
                 <button onclick="location.reload()" class="text-xs bg-gray-200 px-3 py-1 rounded text-gray-500">登出</button>
             </div>
 
-            <nav id="mainNav" class="grid grid-cols-4 bg-white rounded-2xl shadow-sm mb-4 p-1 border text-sm">
-                <button class="py-3 rounded-xl font-bold nav-btn active" data-target="schedule">預約</button>
-                <button class="py-3 rounded-xl font-bold nav-btn" data-target="checkin">打卡</button>
-                <button class="py-3 rounded-xl font-bold nav-btn" data-target="history">紀錄</button>
-                <button class="py-3 rounded-xl font-bold nav-btn" data-target="profile">個人</button>
+            <nav id="mainNav" class="grid grid-cols-3 sm:grid-cols-6 bg-white rounded-2xl shadow-sm mb-4 p-1 border text-xs gap-1 text-center">
+                <button class="py-3 rounded-xl font-bold nav-btn active" data-target="schedule">預約排班</button>
+                <button class="py-3 rounded-xl font-bold nav-btn" data-target="checkin">日常打卡</button>
+                <button class="py-3 rounded-xl font-bold nav-btn" data-target="wingTab">翅膀回報</button>
+                <button class="py-3 rounded-xl font-bold nav-btn" data-target="weekTab">周任回報</button>
+                <button class="py-3 rounded-xl font-bold nav-btn" data-target="history">歷程紀錄</button>
+                <button class="py-3 rounded-xl font-bold nav-btn" data-target="profile">個人中心</button>
             </nav>
 
             <section id="schedule" class="tab-content active bg-white p-6 rounded-2xl border">
@@ -67,18 +69,87 @@
             </section>
 
             <section id="checkin" class="tab-content bg-white p-6 rounded-2xl border text-center max-w-xl mx-auto">
-                <div id="timeStatus" class="mb-4 p-3 rounded-xl text-xs font-bold bg-blue-50 text-blue-600">📌 提示：上下班分流時段，上班為00-03分;下班為58-00分</div>
+                <div id="timeStatus" class="mb-4 p-3 rounded-xl text-xs font-bold bg-blue-50 text-blue-600">📌 提示：同一個小時內的上下班卡各自限提交 1 次。</div>
                 <div class="mb-4 text-left">
                     <label class="block w-full border-2 border-dashed border-gray-300 rounded-2xl p-6 cursor-pointer hover:bg-gray-50 transition text-center">
                         <i class="fa fa-camera text-3xl text-gray-300 mb-2"></i>
-                        <span id="fileNameDisplay" class="block text-sm text-gray-500">點擊選取、拖曳或拍攝截圖</span>
-                        <input type="file" id="imgInput" accept="image/*" class="hidden" onchange="previewImage()">
+                        <span id="fileNameDisplay" class="block text-sm text-gray-500">點擊選取、拖曳或拍攝日常打卡截圖</span>
+                        <input type="file" id="imgInput" accept="image/*" class="hidden" onchange="previewImage('imgInput', 'fileNameDisplay')">
                     </label>
                 </div>
-                <div id="checkinBtnContainer"></div>
+                <div id="checkinBtnContainer" class="mb-6"></div>
+
+                <div class="border-t pt-6 text-left">
+                    <h4 class="font-bold text-sm text-gray-700 mb-2"><i class="fa fa-calendar-plus-o text-red-500"></i> 忘記打卡？向管理員申請補卡</h4>
+                    <div class="bg-gray-50 p-4 rounded-xl space-y-3 border text-xs">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-gray-500 mb-1">補卡日期</label>
+                                <input type="date" id="repairDate" class="w-full p-2 border rounded-lg bg-white">
+                            </div>
+                            <div>
+                                <label class="block text-gray-500 mb-1">補卡時段(小時)</label>
+                                <select id="repairHour" class="w-full p-2 border rounded-lg bg-white"></select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-gray-500 mb-1">考勤項目</label>
+                            <div class="flex gap-4 font-bold">
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="repairType" value="上班打卡" checked> 上班打卡</label>
+                                <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="repairType" value="下班打卡"> 下班打卡</label>
+                            </div>
+                        </div>
+                        <button onclick="submitRepairRequest()" class="w-full bg-red-500 text-white py-3 rounded-xl font-bold shadow active:scale-95 transition">提交補打卡申請(不需截圖)</button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="wingTab" class="tab-content bg-white p-6 rounded-2xl border max-w-xl mx-auto">
+                <h3 class="font-bold text-blue-600 mb-4 text-base border-b pb-2"><i class="fa fa-paper-plane"></i> 主播翅膀禮物回報專區</h3>
+                <div class="space-y-4 text-sm">
+                    <div>
+                        <span class="block font-bold text-gray-700 mb-2">1. 請選擇翅膀種類：</span>
+                        <div class="flex gap-4 bg-gray-50 p-3 rounded-xl border font-bold">
+                            <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="wingType" value="紅羽" checked> 紅羽</label>
+                            <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="wingType" value="粉羽"> 粉羽</label>
+                            <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="wingType" value="璀璨"> 璀璨</label>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="block font-bold text-gray-700 mb-2">2. 上傳收禮截圖證明：</span>
+                        <label class="block w-full border-2 border-dashed border-gray-300 rounded-2xl p-6 cursor-pointer hover:bg-gray-50 transition text-center bg-gray-50">
+                            <i class="fa fa-image text-3xl text-gray-300 mb-2"></i>
+                            <span id="wingFileName" class="block text-xs text-gray-500">點擊選取或拍攝翅膀收禮截圖</span>
+                            <input type="file" id="wingImgInput" accept="image/*" class="hidden" onchange="previewImage('wingImgInput', 'wingFileName')">
+                        </label>
+                    </div>
+                    <button onclick="submitWingReport()" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold shadow-md active:scale-95 transition">送出翅膀回報審查</button>
+                </div>
+            </section>
+
+            <section id="weekTab" class="tab-content bg-white p-6 rounded-2xl border max-w-xl mx-auto">
+                <h3 class="font-bold text-green-600 mb-4 text-base border-b pb-2"><i class="fa fa-tasks"></i> 主播每周任務回報專區</h3>
+                <div class="space-y-4 text-sm">
+                    <div>
+                        <span class="block font-bold text-gray-700 mb-2">1. 請選擇周任務級別：</span>
+                        <div class="flex gap-4 bg-gray-50 p-3 rounded-xl border font-bold">
+                            <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="weekType" value="初階" checked> 初階任務</label>
+                            <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="weekType" value="高階"> 高階任務</label>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="block font-bold text-gray-700 mb-2">2. 請選擇完成方式：</span>
+                        <div class="flex gap-4 bg-gray-50 p-3 rounded-xl border font-bold">
+                            <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="weekMethod" value="累積" checked> 累積完成</label>
+                            <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="weekMethod" value="一次完成"> 一次完成</label>
+                        </div>
+                    </div>
+                    <button onclick="submitWeekReportTextOnly()" class="w-full bg-green-600 text-white py-4 rounded-xl font-bold shadow-md active:scale-95 transition">一鍵提交周任回報(無需截圖)</button>
+                </div>
             </section>
 
             <section id="history" class="tab-content bg-white p-4 rounded-2xl border min-h-[300px]">
+                <p class="text-gray-400 text-xs mb-2 px-1">💡 系統提示：僅顯示您個人的最新 30 筆歷史回報動態</p>
                 <div id="personalList" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
             </section>
 
@@ -95,23 +166,30 @@
                 
                 <h4 class="font-bold text-sm mb-3 text-gray-600">數據報表匯出</h4>
                 <button onclick="exportToExcel()" class="max-w-md bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-2xl shadow-lg mb-6 flex justify-center items-center gap-2 active:scale-95 transition">
-                    <i class="fa fa-file-excel-o"></i> 導出 45 天考勤試算表
+                    <i class="fa fa-file-excel-o"></i> 導出 45 天考勤整合報表
                 </button>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div class="md:col-span-1 space-y-6">
                         <div>
-                            <h4 class="font-bold text-sm mb-3 text-gray-600">待審核申請</h4>
+                            <h4 class="font-bold text-sm mb-2 text-red-500"><i class="fa fa-calendar-plus-o"></i> 待審核補卡申請</h4>
+                            <div id="adminRepairList" class="space-y-2 bg-red-50/50 p-2 rounded-xl border border-red-100 min-h-[60px] max-h-60 overflow-y-auto"></div>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-sm mb-2 text-gray-600">待審核加入申請</h4>
                             <div id="pendingList" class="space-y-2 bg-gray-50 p-2 rounded-xl border min-h-[60px]"></div>
                         </div>
                         <div>
-                            <h4 class="font-bold text-sm mb-3 text-gray-600">家族成員 (<span id="userCount">0</span>)</h4>
-                            <div id="userList" class="space-y-2 max-h-64 overflow-y-auto bg-gray-50 p-2 rounded-xl border"></div>
+                            <h4 class="font-bold text-sm mb-2 text-gray-600">家族成員 (<span id="userCount">0</span>)</h4>
+                            <div id="userList" class="space-y-2 max-h-60 overflow-y-auto bg-gray-50 p-2 rounded-xl border"></div>
                         </div>
                     </div>
                     
                     <div class="md:col-span-2">
-                        <h4 class="font-bold text-sm mb-3 text-red-600"><i class="fa fa-exclamation-triangle"></i> 全體動態管理（可強制刪除排班）</h4>
+                        <div class="flex justify-between items-center mb-3">
+                            <h4 class="font-bold text-sm text-red-600"><i class="fa fa-exclamation-triangle"></i> 全體動態管理（打卡紀錄均可隨時刪除）</h4>
+                            <span class="text-[11px] text-gray-400">⚡ 僅載入最新 30 筆防止卡頓</span>
+                        </div>
                         <div id="adminAllList" class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[600px] overflow-y-auto p-1"></div>
                     </div>
                 </div>
@@ -130,20 +208,28 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         let curUser = null;
-        let globalRecords = [];
+        let globalRecordsForOptions = [];
 
         function initDateRange() {
             const today = new Date();
             const day3 = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
             const formatDate = (d) => d.toLocaleDateString('zh-TW', {year:'numeric',month:'2-digit',day:'2-digit'}).replace(/\//g,'-');
             
-            const minStr = formatDate(today);
-            const maxStr = formatDate(day3);
-            
-            const dateInput = document.getElementById('dateInput');
-            dateInput.value = minStr;
-            dateInput.min = minStr;
-            dateInput.max = maxStr;
+            if(document.getElementById('dateInput')) {
+                const minStr = formatDate(today);
+                document.getElementById('dateInput').value = minStr;
+                document.getElementById('dateInput').min = minStr;
+                document.getElementById('dateInput').max = formatDate(day3);
+            }
+
+            const repairHourSel = document.getElementById('repairHour');
+            if(repairHourSel) {
+                repairHourSel.innerHTML = "";
+                for(let i=0; i<24; i++) {
+                    let h = i < 10 ? '0'+i : i; let nH = (i+1)%24; nH = nH < 10 ? '0'+nH : nH;
+                    repairHourSel.innerHTML += `<option value="${h}:00 - ${nH}:00">${h}:00 - ${nH}:00</option>`;
+                }
+            }
         }
 
         function checkTime() {
@@ -153,11 +239,11 @@
             if(!container) return;
             
             if (m === 0) {
-                container.innerHTML = `<div class="grid grid-cols-2 gap-4"><button onclick="handleImageCheckin('上班打卡')" class="bg-green-500 text-white py-4 rounded-xl font-bold shadow-lg active:scale-95 transition">提交【上班】打卡</button><button onclick="handleImageCheckin('下班打卡')" class="bg-orange-500 text-white py-4 rounded-xl font-bold shadow-lg active:scale-95 transition">提交【下班】打卡</button></div>`;
+                container.innerHTML = `<div class="grid grid-cols-2 gap-4"><button onclick="handleDailyCheckin('上班打卡')" class="bg-green-500 text-white py-4 rounded-xl font-bold shadow-lg active:scale-95 transition">提交【上班】打卡</button><button onclick="handleDailyCheckin('下班打卡')" class="bg-orange-500 text-white py-4 rounded-xl font-bold shadow-lg active:scale-95 transition">提交【下班】打卡</button></div>`;
             } else if (m >= 1 && m <= 3) {
-                container.innerHTML = `<button onclick="handleImageCheckin('上班打卡')" class="w-full bg-green-500 text-white py-4 rounded-xl font-bold shadow-lg active:scale-95 transition">提交【上班】截圖打卡</button>`;
+                container.innerHTML = `<button onclick="handleDailyCheckin('上班打卡')" class="w-full bg-green-500 text-white py-4 rounded-xl font-bold shadow-lg active:scale-95 transition">提交【上班】截圖打卡</button>`;
             } else if (m >= 58 && m <= 59) {
-                container.innerHTML = `<button onclick="handleImageCheckin('下班打卡')" class="w-full bg-orange-500 text-white py-4 rounded-xl font-bold shadow-lg active:scale-95 transition">提交【下班】截圖打卡</button>`;
+                container.innerHTML = `<button onclick="handleDailyCheckin('下班打卡')" class="w-full bg-orange-500 text-white py-4 rounded-xl font-bold shadow-lg active:scale-95 transition">提交【下班】截圖打卡</button>`;
             } else {
                 container.innerHTML = `<button class="w-full disabled-btn text-white py-4 rounded-xl font-bold shadow-md" disabled>非打卡時段 (開放時段：58分 ~ 03分)</button>`;
             }
@@ -198,47 +284,165 @@
             
             if(curUser.role === 'admin') {
                 const nav = document.getElementById('mainNav');
-                nav.className = "grid grid-cols-5 bg-white rounded-2xl shadow-sm mb-4 p-1 border text-sm";
-                nav.innerHTML += `<button class="py-3 rounded-xl font-bold nav-btn border border-red-100 text-red-600" data-target="admin"><i class="fa fa-cog"></i> 管理</button>`;
+                nav.className = "grid grid-cols-3 sm:grid-cols-7 bg-white rounded-2xl shadow-sm mb-4 p-1 border text-xs gap-1 text-center";
+                nav.innerHTML += `<button class="py-3 rounded-xl font-bold nav-btn border border-red-100 text-red-600" data-target="admin"><i class="fa fa-cog"></i> 最高管理</button>`;
                 bindNavEvents(); 
-                loadAdminData(); loadUserList();
+                loadAdminData(); loadUserList(); loadRepairRequests();
             }
             initDateRange();
             loadLogs(); checkTime();
         }
 
-        window.previewImage = () => {
-            const file = document.getElementById('imgInput').files[0];
-            if(file) document.getElementById('fileNameDisplay').innerText = "已選取：" + file.name;
+        window.previewImage = (inputId, displayId) => {
+            const file = document.getElementById(inputId).files[0];
+            if(file) document.getElementById(displayId).innerText = "已選取：" + file.name;
         };
 
-        window.handleImageCheckin = (checkinType) => {
+        // 【日常打卡優化：限制每位主播在同一個小時之內，同種類型打卡只能有一次】
+        window.handleDailyCheckin = (checkinType) => {
             const file = document.getElementById('imgInput').files[0];
-            if(!file) return alert('請選取截圖');
+            if(!file) return alert('請先選取日常打卡截圖！');
+
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('zh-TW', {year:'numeric',month:'2-digit',day:'2-digit'}).replace(/\//g,'-');
+            const hourStr = now.getHours() < 10 ? '0' + now.getHours() : now.getHours();
             
+            // 比對 globalRecordsForOptions 是否存在同日期、同小時、同項目的卡紀錄
+            let isAlreadyCheckedIn = false;
+            globalRecordsForOptions.forEach(r => {
+                if(r.user === curUser.acc && r.type === checkinType) {
+                    if(r.time && r.time.includes(dateStr)) {
+                        const loggedHour = r.time.split(' ')[1].split(':')[0];
+                        if(loggedHour == hourStr) {
+                            isAlreadyCheckedIn = true;
+                        }
+                    }
+                }
+            });
+
+            if(isAlreadyCheckedIn) {
+                return alert(`🚨 提示：您在這個時段已經辦理過【${checkinType}】囉，請勿重複提交！`);
+            }
+
             const reader = new FileReader();
             reader.onload = (e) => {
-                sendRecord(checkinType, e.target.result);
-                document.getElementById('imgInput').value = "";
-                document.getElementById('fileNameDisplay').innerText = "點擊選取、拖曳或拍攝截圖";
-                alert(`${checkinType}成功！`);
+                sendRecord(checkinType, e.target.result).then(() => {
+                    document.getElementById('imgInput').value = "";
+                    document.getElementById('fileNameDisplay').innerText = "點擊選取、拖曳或拍攝日常打卡截圖";
+                    alert(`🎉 ${checkinType}成功！`);
+                });
             };
             reader.readAsDataURL(file);
         };
 
-        window.sendRecord = (type, detail) => {
+        // 通用圖檔打卡回報（翅膀專用）
+        window.handleImageCheckinGeneric = (subType, inputId) => {
+            const file = document.getElementById(inputId).files[0];
+            if(!file) return alert('請先選取並上傳截圖照片！');
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                sendRecord(subType, e.target.result);
+                document.getElementById(inputId).value = "";
+                document.getElementById('wingFileName').innerText = "點擊選取或拍攝翅膀收禮截圖";
+                alert(`回報成功！已寫入紀錄。`);
+            };
+            reader.readAsDataURL(file);
+        };
+
+        window.sendRecord = (type, detail, customTimeStr = null) => {
+            const targetTimeStr = customTimeStr ? customTimeStr : new Date().toLocaleString('zh-TW', {hour12:false});
             return db.ref('attendance_records').push({
                 user: curUser.acc, nick: curUser.nick, type, detail,
                 timestamp: Date.now(),
-                time: new Date().toLocaleString('zh-TW', {hour12:false})
+                time: targetTimeStr
             });
+        };
+
+        // 翅膀回報提交（移除完成方式勾選）
+        window.submitWingReport = () => {
+            const wType = document.querySelector('input[name="wingType"]:checked').value;
+            const detailText = `【翅膀回報】禮物級別：${wType}`;
+            handleImageCheckinGeneric(detailText, 'wingImgInput');
+        };
+
+        // 周任回報提交（移除截圖，純文字一鍵回報）
+        window.submitWeekReportTextOnly = () => {
+            const weekType = document.querySelector('input[name="weekType"]:checked').value;
+            const weekMethod = document.querySelector('input[name="weekMethod"]:checked').value;
+            const detailText = `（純文字自助登記成功）完成進度：${weekMethod}`;
+            
+            sendRecord(`【周任回報】級別：${weekType}`, detailText).then(() => {
+                alert('🎉 周任務進度已成功登記歸檔！');
+            });
+        };
+
+        // 主播提交補卡申請（免圖）
+        window.submitRepairRequest = () => {
+            const rDate = document.getElementById('repairDate').value;
+            const rHour = document.getElementById('repairHour').value;
+            const rType = document.querySelector('input[name="repairType"]:checked').value;
+
+            if(!rDate || !rHour) return alert('請完整選擇補打卡的日期與時段！');
+
+            db.ref('repair_requests').push({
+                user: curUser.acc, nick: curUser.nick,
+                repairDate: rDate, repairHour: rHour, type: rType,
+                timestamp: Date.now()
+            }).then(() => {
+                alert('補打卡申請已送出！請等待廳長後台審核。');
+                document.getElementById('repairDate').value = "";
+            });
+        };
+
+        // 管理端：加載未審核補卡申請
+        function loadRepairRequests() {
+            db.ref('repair_requests').on('value', snap => {
+                let h = "";
+                snap.forEach(c => {
+                    const r = c.val();
+                    h += `<div class="p-3 bg-white rounded-xl border border-red-200 text-[11px] space-y-2 shadow-sm">
+                        <div><b>${r.nick}</b> 申請補卡</div>
+                        <div class="text-gray-500">日期：${r.repairDate}<br>時段：${r.repairHour}<br>項目：<span class="text-red-600 font-bold">${r.type}</span></div>
+                        <div class="flex gap-2 justify-end">
+                            <button onclick="rejectRepair('${c.key}')" class="px-2 py-1 text-gray-400 border rounded-lg hover:bg-gray-50">拒絕</button>
+                            <button onclick="approveRepair('${c.key}')" class="px-3 py-1 bg-green-500 text-white font-bold rounded-lg shadow-sm hover:bg-green-600">核准通過</button>
+                        </div>
+                    </div>`;
+                });
+                document.getElementById('adminRepairList').innerHTML = h || "<p class='text-gray-400 text-center py-2 text-xs w-full'>目前無補卡申請</p>";
+            });
+        }
+
+        // 核准補卡
+        window.approveRepair = (key) => {
+            db.ref('repair_requests/' + key).once('value', snap => {
+                const r = snap.val();
+                if(!r) return;
+                
+                const targetTimeStr = `${r.repairDate.replace(/-/g, '/')} ${r.repairHour.split(' - ')[0]}:00`;
+                const customDetail = `（管理員審核補卡成功）原申請時段：${r.repairHour}`;
+
+                db.ref('attendance_records').push({
+                    user: r.user, nick: r.nick,
+                    type: `[補] ${r.type}`, detail: customDetail,
+                    timestamp: r.timestamp,
+                    time: targetTimeStr
+                }).then(() => {
+                    db.ref('repair_requests/' + key).remove();
+                    alert('已核准補卡！資料已自動寫入補卡時間欄。');
+                });
+            });
+        };
+
+        window.rejectRepair = (key) => {
+            if(confirm('確定要拒絕這筆補打卡申請嗎？')) db.ref('repair_requests/' + key).remove();
         };
 
         function updateTimeOptions() {
             const selectedDate = document.getElementById('dateInput').value; 
             if(!selectedDate) return;
 
-            // 核心修改：取得當前系統即時的「日期」與「小時」
             const now = new Date();
             const formatDate = (d) => d.toLocaleDateString('zh-TW', {year:'numeric',month:'2-digit',day:'2-digit'}).replace(/\//g,'-');
             const todayStr = formatDate(now);
@@ -246,14 +450,12 @@
 
             const scheduleCount = {};
             
-            globalRecords.forEach(r => {
+            globalRecordsForOptions.forEach(r => {
                 if(r.type && r.type.includes('預約排班') && r.detail) {
                     const rawDetail = r.detail.trim();
                     if (rawDetail.startsWith(selectedDate)) {
                         let rSlot = rawDetail.substring(11).split('(')[0].trim();
-                        if(rSlot) {
-                            scheduleCount[rSlot] = (scheduleCount[rSlot] || 0) + 1;
-                        }
+                        if(rSlot) scheduleCount[rSlot] = (scheduleCount[rSlot] || 0) + 1;
                     }
                 }
             });
@@ -265,10 +467,8 @@
             for(let i=0; i<24; i++){
                 let h = i < 10 ? '0'+i : i; let nH = (i+1)%24; nH = nH < 10 ? '0'+nH : nH;
                 let slot = `${h}:00 - ${nH}:00`; 
-                
                 let count = scheduleCount[slot] || 0;
                 
-                // 核心邏輯：如果選擇的日期是「今天」，且該時段的小時小於等於當前小時，則直接全面阻斷
                 if (selectedDate === todayStr && i <= currentHour) {
                     sel.innerHTML += `<option value="${slot}" disabled class="text-gray-400">${slot} (❌ 已過時段)</option>`;
                 } else if(count >= 4) {
@@ -280,114 +480,90 @@
             if(prevSelectedValue) sel.value = prevSelectedValue; 
 
             let myTodayHtml = "";
-            globalRecords.forEach(r => {
+            globalRecordsForOptions.forEach(r => {
                 if(r.user === curUser.acc && r.type && r.type.includes('預約排班') && r.detail) {
                     const rawDetail = r.detail.trim();
                     if (rawDetail.startsWith(selectedDate)) {
                         const cleanSlot = rawDetail.substring(11).split('(')[0].trim();
                         myTodayHtml += `<div class="flex justify-between items-center bg-blue-50 p-3 rounded-xl border border-blue-100 text-xs font-bold text-gray-700">
                             <span><i class="fa fa-clock-o text-blue-500"></i> ${cleanSlot}</span>
-                            <button onclick="cancelSchedule('${r.key}')" class="text-red-500 border border-red-200 px-3 py-1 rounded-lg bg-white active:bg-red-50 shadow-sm font-bold">取消預約</button>
+                            <button onclick="cancelSchedule('${r.key}')" class="text-red-500 border border-red-200 px-3 py-1 rounded-lg bg-white active:bg-red-50 shadow-sm font-bold">取消</button>
                         </div>`;
                     }
                 }
             });
-            document.getElementById('myTodayScheduleList').innerHTML = myTodayHtml || `<p class="text-gray-400 text-center col-span-full py-2 text-xs">您當天尚未安排 any 時段</p>`;
+            document.getElementById('myTodayScheduleList').innerHTML = myTodayHtml || `<p class="text-gray-400 text-center col-span-full py-2 text-xs">您當天尚未安排任何時段</p>`;
         }
 
         window.submitSchedule = () => {
             const d = document.getElementById('dateInput').value;
             let t = document.getElementById('timeInput').value;
             if(!d || !t) return alert('請選擇日期與時段');
-            if(t.includes('已額滿')) return alert('該時段已額滿，請選擇其他時段');
-            if(t.includes('已過時段')) return alert('該時段已經過去，無法辦理補預約！');
+            if(t.includes('已額滿')) return alert('該時段已額滿');
+            if(t.includes('已過時段')) return alert('該時段已過！');
 
             t = t.split('(')[0].trim();
             const inputDate = new Date(d + "T00:00:00");
             const today = new Date();
             today.setHours(0,0,0,0);
             
-            const diffTime = inputDate.getTime() - today.getTime();
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
+            const diffDays = Math.ceil((inputDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
             if (diffDays < 0 || diffDays > 2) {
                 alert("🚨 系統阻斷：本系統僅開放預約「今天、明天、後天」這3天內的時段！");
-                initDateRange();
-                return;
-            }
-
-            // 後端再做一次當前小時的即時防禦阻斷
-            const now = new Date();
-            const formatDate = (d) => d.toLocaleDateString('zh-TW', {year:'numeric',month:'2-digit',day:'2-digit'}).replace(/\//g,'-');
-            if (d === formatDate(now)) {
-                const targetHour = parseInt(t.split(':')[0], 10);
-                if (targetHour <= now.getHours()) {
-                    return alert("🚨 系統阻斷：您無法選擇當前小時或過去的時段！");
-                }
+                initDateRange(); return;
             }
 
             const targetDetail = `${d} ${t}`;
             let isDuplicated = false;
-
-            globalRecords.forEach(r => {
+            globalRecordsForOptions.forEach(r => {
                 if(r.user === curUser.acc && r.type && r.type.includes('預約排班')) {
-                    const cleanDetail = r.detail.split('(')[0].trim();
-                    if(cleanDetail === targetDetail) isDuplicated = true;
+                    if(r.detail.split('(')[0].trim() === targetDetail) isDuplicated = true;
                 }
             });
 
-            if(isDuplicated) {
-                alert(`🚨 提示：您已經登記過 ${d} 的 ${t} 時段了，請勿重複卡位預約！`);
-            } else {
-                sendRecord('預約排班', targetDetail).then(() => alert('成功送出！'));
-            }
+            if(isDuplicated) alert(`🚨 提示：您已經登記過此時段了！`);
+            else sendRecord('預約排班', targetDetail).then(() => alert('成功送出！'));
         };
 
         window.cancelSchedule = (key) => {
             if(confirm('確定要取消這個時段的排班嗎？')) {
-                db.ref('attendance_records/' + key).remove().then(() => {
-                    alert('已成功取消排班，名額已釋放！');
-                });
+                db.ref('attendance_records/' + key).remove().then(() => { alert('已成功取消排班'); });
             }
         };
 
-        window.adminDeleteRecord = (key, nick, detail) => {
-            if(confirm(`⚠️ 廳長權限確認：\n確定要強制刪除「${nick}」的排班：\n【${detail}】嗎？`)) {
+        // 【管理員刪除功能：所有考勤、打卡、回報數據均可一鍵從資料庫剔除】
+        window.adminDeleteRecord = (key, nick) => {
+            if(confirm(`⚠️ 廳長最高權限確認：\n確定要永久刪除「${nick}」的這筆資料庫回報紀錄嗎？`)) {
                 db.ref('attendance_records/' + key).remove().then(() => {
-                    alert('已成功強制移除該成員排班！');
+                    alert('該筆紀錄已成功自系統中剔除！');
                 });
             }
         };
 
         function loadLogs() {
-            const limit = Date.now() - (45 * 24 * 60 * 60 * 1000);
-            db.ref('attendance_records').orderByChild('timestamp').startAt(limit).on('value', snap => {
-                let p = ""; let a = ""; globalRecords = [];
-                const list = [];
+            const limitTime = Date.now() - (45 * 24 * 60 * 60 * 1000);
+            
+            db.ref('attendance_records').orderByChild('timestamp').startAt(limitTime).on('value', snap => {
+                globalRecordsForOptions = [];
+                snap.forEach(c => { let v = c.val(); v.key = c.key; globalRecordsForOptions.push(v); });
+                updateTimeOptions();
+
+                // 畫面渲染限制最新 30 筆
+                let p = ""; let a = "";
+                const list = [...globalRecordsForOptions];
                 
-                snap.forEach(c => { 
-                    const v = c.val(); 
-                    v.key = c.key; 
-                    list.push(v); 
-                    globalRecords.push(v); 
-                });
-                
-                list.reverse().forEach(r => {
+                list.reverse().slice(0, 30).forEach(r => {
                     const isImg = r.detail && r.detail.startsWith('data:image');
                     const cleanShowDetail = (r.type && r.type.includes('預約排班')) ? r.detail.split('(')[0].trim() : r.detail;
                     
-                    let imgTagLabel = "";
-                    if (isImg) {
-                        if (r.type === "上班打卡") imgTagLabel = `<div class="text-left text-green-600 font-bold mb-1 text-[10px]"><i class="fa fa-arrow-circle-up"></i> 【上班打卡截圖】</div>`;
-                        if (r.type === "下班打卡") imgTagLabel = `<div class="text-left text-orange-600 font-bold mb-1 text-[10px]"><i class="fa fa-arrow-circle-down"></i> 【下班打卡截圖】</div>`;
-                    }
-                    
-                    const display = isImg ? `${imgTagLabel}<img src="${r.detail}" class="record-img mx-auto" loading="lazy" onclick="window.open(this.src)">` : `<div class="bg-gray-50 p-2 rounded text-gray-500 font-bold">${cleanShowDetail}</div>`;
+                    let display = isImg ? `<img src="${r.detail}" class="record-img mx-auto" loading="lazy" onclick="window.open(this.src)">` : `<div class="bg-gray-50 p-2 rounded text-gray-500 font-bold">${cleanShowDetail}</div>`;
                     
                     let typeTagClass = "text-gray-400";
-                    if (r.type === "上班打卡") typeTagClass = "text-green-600 font-extrabold";
-                    if (r.type === "下班打卡") typeTagClass = "text-orange-600 font-extrabold";
+                    if (r.type.includes("上班")) typeTagClass = "text-green-600 font-extrabold";
+                    if (r.type.includes("下班")) typeTagClass = "text-orange-600 font-extrabold";
                     if (r.type === "預約排班") typeTagClass = "text-blue-600";
+                    if (r.type.includes("翅膀")) typeTagClass = "text-purple-600 font-bold";
+                    if (r.type.includes("周任")) typeTagClass = "text-indigo-600 font-bold";
 
                     const card = `<div class="p-4 bg-white rounded-2xl shadow-sm mb-1 border border-gray-100 text-[11px]">
                         <div class="flex justify-between items-center mb-1"><span class="font-bold text-blue-600">${r.nick}</span><span class="text-gray-300 font-normal">${r.time}</span></div>
@@ -395,19 +571,14 @@
                     </div>`;
                     if(r.user === curUser.acc) p += card;
 
-                    let adminDeleteBtn = "";
-                    if(r.type && r.type.includes('預約排班')) {
-                        adminDeleteBtn = `<button onclick="adminDeleteRecord('${r.key}', '${r.nick}', '${cleanShowDetail}')" class="text-[10px] bg-red-50 text-red-600 border border-red-200 px-2 py-1 rounded-lg font-bold hover:bg-red-100 transition">強制刪除</button>`;
-                    }
-
                     const adminCard = `<div class="p-4 bg-white rounded-2xl shadow-sm border border-gray-100 text-[11px]">
                         <div class="flex justify-between items-center mb-1">
-                            <span class="font-bold text-gray-700">${r.nick} <span class="text-gray-400 font-normal">(${r.user})</span></span>
+                            <span class="font-bold text-gray-700">${r.nick} (${r.user})</span>
                             <span class="text-gray-300 font-normal">${r.time}</span>
                         </div>
                         <div class="flex justify-between items-center mt-1">
                             <span class="${typeTagClass}">${r.type}</span>
-                            ${adminDeleteBtn}
+                            <button onclick="adminDeleteRecord('${r.key}', '${r.nick}')" class="text-[10px] bg-red-50 text-red-600 border border-red-200 px-2 py-0.5 rounded font-bold hover:bg-red-100 transition">刪除</button>
                         </div>
                         <div class="mt-2">${display}</div>
                     </div>`;
@@ -415,28 +586,44 @@
                 });
                 document.getElementById('personalList').innerHTML = p || "<p class='col-span-full text-center text-gray-400 py-4'>目前無紀錄</p>";
                 document.getElementById('adminAllList').innerHTML = a || "<p class='col-span-full text-center text-gray-400 py-4'>目前無紀錄</p>";
-                
-                updateTimeOptions();
             });
         }
 
         window.exportToExcel = () => {
-            if (globalRecords.length === 0) return alert('無紀錄可導出');
-            const dateCountMap = {};
-            globalRecords.forEach(r => {
-                const d = r.time ? r.time.split(' ')[0] : "未知";
-                const k = `${r.user}_${d}`;
-                dateCountMap[k] = (dateCountMap[k] || 0) + 1;
+            alert('系統正在索取完整數據包，請稍候...');
+            const limitTime = Date.now() - (45 * 24 * 60 * 60 * 1000);
+            
+            db.ref('attendance_records').orderByChild('timestamp').startAt(limitTime).once('value', snap => {
+                const fullRecords = [];
+                snap.forEach(c => { fullRecords.push(c.val()); });
+                if (fullRecords.length === 0) return alert('目前無任何數據可供導出');
+
+                const dateCountMap = {};
+                fullRecords.forEach(r => {
+                    const d = r.time ? r.time.split(' ')[0] : "未知";
+                    const k = `${r.user}_${d}`;
+                    dateCountMap[k] = (dateCountMap[k] || 0) + 1;
+                });
+
+                const data = fullRecords.reverse().map(r => {
+                    const t = r.time ? r.time.split(' ') : ["未知", "未知"];
+                    const isImg = r.detail && r.detail.startsWith('data:image');
+                    const cleanExcelDetail = (r.type && r.type.includes('預約排班')) ? r.detail.split('(')[0].trim() : (isImg ? "（已正常提交截圖，請至系統核對圖檔）" : r.detail);
+                    
+                    return { 
+                        "成員暱稱": r.nick, "成員帳號": r.user, 
+                        "動作日期": t[0], "動作時間": t[1], 
+                        "當天累計考勤次數": dateCountMap[`${r.user}_${t[0]}`], 
+                        "回報項目": r.type, "詳細文字內容": cleanExcelDetail 
+                    };
+                });
+
+                const ws = XLSX.utils.json_to_sheet(data);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "考勤回報整合報表");
+                XLSX.writeFile(wb, `金好家族45天考勤綜合報表_${new Date().toLocaleDateString().replace(/\//g,'-')}.xlsx`);
+                alert('🎉 報表已成功導出！');
             });
-            const data = globalRecords.map(r => {
-                const t = r.time ? r.time.split(' ') : ["未知", "未知"];
-                const cleanExcelDetail = (r.type && r.type.includes('預約排班')) ? r.detail.split('(')[0].trim() : "圖片截圖";
-                return { "成員": r.nick, "帳號": r.user, "日期": t[0], "時間": t[1], "當天次數": dateCountMap[`${r.user}_${t[0]}`], "項目": r.type, "詳細內容": cleanExcelDetail };
-            });
-            const ws = XLSX.utils.json_to_sheet(data);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "報表");
-            XLSX.writeFile(wb, `金好家族報表_${new Date().toLocaleDateString().replace(/\//g,'-')}.xlsx`);
         };
 
         function loadUserList() {
@@ -444,15 +631,28 @@
                 let h = ""; let count = 0;
                 snap.forEach(c => {
                     const u = c.val(); if(u.acc === 'admin') return; count++;
-                    h += `<div class="flex justify-between items-center bg-white p-3 rounded-xl border mb-2 text-xs">
-                        <span><b>${u.nick}</b> (${u.acc})</span>
-                        <button onclick="deleteUser('${u.acc}')" class="text-red-500 border px-2 py-1 rounded hover:bg-red-50">除名</button>
+                    h += `<div class="bg-white p-3 rounded-xl border mb-2 text-xs space-y-2 shadow-sm">
+                        <div class="flex justify-between items-center">
+                            <span><b>${u.nick}</b> (${u.acc})</span>
+                            <button onclick="deleteUser('${u.acc}')" class="text-red-500 border border-red-200 px-2 py-0.5 rounded text-[11px]">除名</button>
+                        </div>
+                        <div class="text-right">
+                            <button onclick="adminResetPassword('${u.acc}', '${u.nick}')" class="text-blue-600 bg-blue-50 border border-blue-200 px-3 py-1 rounded-lg text-[11px] font-bold">重設密碼</button>
+                        </div>
                     </div>`;
                 });
                 document.getElementById('userList').innerHTML = h;
                 document.getElementById('userCount').innerText = count;
             });
         }
+
+        window.adminResetPassword = (acc, nick) => {
+            const newPwd = prompt(`請輸入要幫「${nick}」設定的新密碼：`);
+            if (newPwd === null) return; 
+            const trimmedPwd = newPwd.trim();
+            if (!trimmedPwd) return alert('密碼不能留空！');
+            db.ref(`users/${acc}/pwd`).set(trimmedPwd).then(() => { alert(`重設成功！已改為 ${trimmedPwd}`); });
+        };
 
         window.deleteUser = (acc) => { if(confirm(`確定除名 ${acc}？`)) db.ref('users/'+acc).remove(); };
         
@@ -463,7 +663,7 @@
                     const u = c.val();
                     h += `<div class="p-4 bg-red-50 rounded-2xl flex justify-between items-center text-xs mb-3 shadow-sm">
                         <span><b>${u.nick}</b> (${u.acc})</span>
-                        <button onclick="approve('${u.acc}')" class="bg-red-500 text-white px-4 py-2 rounded-xl font-bold hover:bg-red-600">准許</button>
+                        <button onclick="approve('${u.acc}')" class="bg-red-500 text-white px-4 py-2 rounded-xl font-bold">准許</button>
                     </div>`;
                 });
                 document.getElementById('pendingList').innerHTML = h || "<p class='text-gray-400 text-center py-2 text-xs w-full'>目前無申請</p>";

@@ -2,8 +2,9 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-color=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>金好家族管理系統</title>
+    <!-- Firebase & Excel 套件 -->
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -13,14 +14,42 @@
         .nav-btn.active { background-color: #2563eb; color: white; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        .record-img { max-width: 100%; max-height: 300px; object-fit: contain; border-radius: 12px; margin-top: 8px; cursor: pointer; border: 1px solid #ddd; display: block; }
+        
+        /* 圖片高效渲染與佔位漸變 */
+        .record-img { 
+            max-width: 100%; 
+            max-height: 280px; 
+            object-fit: contain; 
+            border-radius: 12px; 
+            margin-top: 8px; 
+            cursor: pointer; 
+            border: 1px solid #eee; 
+            display: block;
+            background: linear-gradient(110deg, #eceff1 8%, #f5f7f8 18%, #eceff1 33%);
+            background-size: 200% 100%;
+            animation: shine 1.5s infinite linear;
+            will-change: transform;
+        }
+        @keyframes shine {
+            to { background-position-x: -200%; }
+        }
+        
+        .scroll-container {
+            -webkit-overflow-scrolling: touch;
+            will-change: transform;
+        }
+
         .disabled-btn { background-color: #d1d5db !important; cursor: not-allowed !important; color: #9ca3af !important; }
         body { -webkit-tap-highlight-color: transparent; }
+        
+        /* 輕量級進度提示 */
+        .loading-text { color: #9ca3af; font-size: 13px; text-align: center; padding: 30px 0; font-weight: bold; width: 100%; }
     </style>
 </head>
 <body class="bg-gray-100 antialiased">
     <div id="app" class="max-w-4xl mx-auto px-4 py-6">
         
+        <!-- 登入頁面 -->
         <div id="authPage" class="max-w-md mx-auto bg-white p-8 rounded-3xl shadow-xl mt-10 text-center">
             <h2 class="text-2xl font-bold mb-6 text-blue-600">金好家族系統</h2>
             <div id="loginForm" class="space-y-4 text-left">
@@ -39,12 +68,14 @@
             </div>
         </div>
 
+        <!-- 主頁面 -->
         <div id="mainPage" class="hidden">
             <div class="flex justify-between items-center mb-4 px-2">
                 <h1 class="text-xl font-bold text-blue-600">Hi, <span id="userHello"></span></h1>
                 <button onclick="location.reload()" class="text-xs bg-gray-200 px-3 py-1 rounded text-gray-500">登出</button>
             </div>
 
+            <!-- 動態導覽列 -->
             <nav id="mainNav" class="grid grid-cols-3 sm:grid-cols-6 bg-white rounded-2xl shadow-sm mb-4 p-1 border text-xs gap-1 text-center">
                 <button class="py-3 rounded-xl font-bold nav-btn active" data-target="schedule">預約排班</button>
                 <button class="py-3 rounded-xl font-bold nav-btn" data-target="checkin">日常打卡</button>
@@ -54,6 +85,7 @@
                 <button class="py-3 rounded-xl font-bold nav-btn" data-target="profile">個人中心</button>
             </nav>
 
+            <!-- 預約排班區塊 -->
             <section id="schedule" class="tab-content active bg-white p-6 rounded-2xl border">
                 <h3 class="font-bold mb-2 text-sm text-gray-700">1. 選擇預約日期 (僅限3天內)</h3>
                 <input type="date" id="dateInput" class="w-full p-4 border rounded-xl mb-4 bg-gray-50 text-sm font-bold" onchange="updateTimeOptions()">
@@ -65,9 +97,10 @@
                 
                 <hr class="my-4">
                 <h4 class="font-bold text-xs text-blue-600 mb-2"><i class="fa fa-calendar-check-o"></i> 您當天已預約的時段：</h4>
-                <div id="myTodayScheduleList" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto"></div>
+                <div id="myTodayScheduleList" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto scroll-container"><div class="loading-text"><i class="fa fa-spinner fa-spin"></i> 排班資料加載中...</div></div>
             </section>
 
+            <!-- 日常打卡區 -->
             <section id="checkin" class="tab-content bg-white p-6 rounded-2xl border text-center max-w-xl mx-auto">
                 <div id="timeStatus" class="mb-4 p-3 rounded-xl text-xs font-bold bg-blue-50 text-blue-600">📌 提示：同一個小時內的上下班卡各自限提交 1 次。</div>
                 <div class="mb-4 text-left">
@@ -79,6 +112,7 @@
                 </div>
                 <div id="checkinBtnContainer" class="mb-6"></div>
 
+                <!-- 補打卡申請功能區 -->
                 <div class="border-t pt-6 text-left">
                     <h4 class="font-bold text-sm text-gray-700 mb-2"><i class="fa fa-calendar-plus-o text-red-500"></i> 忘記打卡？向管理員申請補卡</h4>
                     <div class="bg-gray-50 p-4 rounded-xl space-y-3 border text-xs">
@@ -104,6 +138,7 @@
                 </div>
             </section>
 
+            <!-- 翅膀回報專頁 -->
             <section id="wingTab" class="tab-content bg-white p-6 rounded-2xl border max-w-xl mx-auto">
                 <h3 class="font-bold text-blue-600 mb-4 text-base border-b pb-2"><i class="fa fa-paper-plane"></i> 主播翅膀禮物回報專區</h3>
                 <div class="space-y-4 text-sm">
@@ -127,6 +162,7 @@
                 </div>
             </section>
 
+            <!-- 周任回報專頁 -->
             <section id="weekTab" class="tab-content bg-white p-6 rounded-2xl border max-w-xl mx-auto">
                 <h3 class="font-bold text-green-600 mb-4 text-base border-b pb-2"><i class="fa fa-tasks"></i> 主播每周任務回報專區</h3>
                 <div class="space-y-4 text-sm">
@@ -141,23 +177,26 @@
                         <span class="block font-bold text-gray-700 mb-2">2. 請選擇完成方式：</span>
                         <div class="flex gap-4 bg-gray-50 p-3 rounded-xl border font-bold">
                             <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="weekMethod" value="累積" checked> 累積完成</label>
-                            <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="weekMethod" value="一次完成"> 一次完成</label>
+                            <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="weekMethod" value="一次完成"> 一開完成</label>
                         </div>
                     </div>
                     <button onclick="submitWeekReportTextOnly()" class="w-full bg-green-600 text-white py-4 rounded-xl font-bold shadow-md active:scale-95 transition">一鍵提交周任回報(無需截圖)</button>
                 </div>
             </section>
 
+            <!-- 個人歷程區 -->
             <section id="history" class="tab-content bg-white p-4 rounded-2xl border min-h-[300px]">
                 <p class="text-gray-400 text-xs mb-2 px-1">💡 系統提示：僅顯示您個人的最新 30 筆歷史回報動態</p>
-                <div id="personalList" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+                <div id="personalList" class="grid grid-cols-1 sm:grid-cols-2 gap-4 scroll-container"><div class="loading-text col-span-full"><i class="fa fa-spinner fa-spin"></i> 正在加載您的個人歷程紀錄...</div></div>
             </section>
 
+            <!-- 修改暱稱區 -->
             <section id="profile" class="tab-content bg-white p-6 rounded-2xl border text-center max-w-md mx-auto">
                 <input id="newNick" type="text" class="w-full p-4 border rounded-xl mb-4 text-sm" placeholder="輸入新暱稱">
                 <button onclick="doUpdateName()" class="w-full bg-black text-white py-4 rounded-xl font-bold">儲存修改</button>
             </section>
 
+            <!-- 管理員獨立切換選單 -->
             <section id="admin" class="tab-content bg-white p-6 rounded-2xl border-2 border-red-500 shadow-xl">
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="font-bold text-red-600 text-lg">家族管理後台</h3>
@@ -170,27 +209,41 @@
                 </button>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- 左側邊欄：審核專區 -->
                     <div class="md:col-span-1 space-y-6">
                         <div>
                             <h4 class="font-bold text-sm mb-2 text-red-500"><i class="fa fa-calendar-plus-o"></i> 待審核補卡申請</h4>
-                            <div id="adminRepairList" class="space-y-2 bg-red-50/50 p-2 rounded-xl border border-red-100 min-h-[60px] max-h-60 overflow-y-auto"></div>
+                            <div id="adminRepairList" class="space-y-2 bg-red-50/50 p-2 rounded-xl border border-red-100 min-h-[60px] max-h-60 overflow-y-auto scroll-container"><div class="loading-text"><i class="fa fa-spinner fa-spin"></i> 載入中...</div></div>
                         </div>
                         <div>
                             <h4 class="font-bold text-sm mb-2 text-gray-600">待審核加入申請</h4>
-                            <div id="pendingList" class="space-y-2 bg-gray-50 p-2 rounded-xl border min-h-[60px]"></div>
+                            <div id="pendingList" class="space-y-2 bg-gray-50 p-2 rounded-xl border min-h-[60px]"><div class="loading-text"><i class="fa fa-spinner fa-spin"></i> 載入中...</div></div>
                         </div>
                         <div>
                             <h4 class="font-bold text-sm mb-2 text-gray-600">家族成員 (<span id="userCount">0</span>)</h4>
-                            <div id="userList" class="space-y-2 max-h-60 overflow-y-auto bg-gray-50 p-2 rounded-xl border"></div>
+                            <div id="userList" class="space-y-2 max-h-60 overflow-y-auto bg-gray-50 p-2 rounded-xl border scroll-container"><div class="loading-text"><i class="fa fa-spinner fa-spin"></i> 載入中...</div></div>
                         </div>
                     </div>
                     
+                    <!-- 右側大區塊：全體流水帳 -->
                     <div class="md:col-span-2">
-                        <div class="flex justify-between items-center mb-3">
-                            <h4 class="font-bold text-sm text-red-600"><i class="fa fa-exclamation-triangle"></i> 全體動態管理（打卡紀錄均可隨時刪除）</h4>
-                            <span class="text-[11px] text-gray-400">⚡ 僅載入最新 30 筆防止卡頓</span>
+                        <div class="bg-gray-50 p-4 rounded-2xl border border-gray-200 mb-4 space-y-3">
+                            <span class="text-xs font-bold text-gray-600 block"><i class="fa fa-search"></i> 後台數據實時搜尋與高效過濾面板</span>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <input type="text" id="adminSearchKeyword" placeholder="搜尋成員暱稱或帳號..." class="p-2 border rounded-xl text-xs outline-none bg-white" oninput="renderAdminLists()">
+                                <input type="date" id="adminSearchDate" class="p-2 border rounded-xl text-xs outline-none bg-white" onchange="renderAdminLists()">
+                            </div>
+                            <div class="flex justify-between items-center text-[11px] text-gray-400">
+                                <span>💡 提示：留空代表看全家族完整歷程紀錄</span>
+                                <button onclick="clearAdminFilters()" class="text-blue-500 font-bold">重置過濾器</button>
+                            </div>
                         </div>
-                        <div id="adminAllList" class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[600px] overflow-y-auto p-1"></div>
+
+                        <div class="flex justify-between items-center mb-2 px-1">
+                            <h4 class="font-bold text-sm text-red-600"><i class="fa fa-exclamation-triangle"></i> 全體動態流水帳</h4>
+                            <span class="text-xs text-gray-500">當前載入: <span id="adminMatchCount" class="font-bold text-red-500">0</span> 筆</span>
+                        </div>
+                        <div id="adminAllList" class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[600px] overflow-y-auto p-1 scroll-container"><div class="loading-text col-span-full"><i class="fa fa-spinner fa-spin"></i> 正在異步同步完整雲端數據流...</div></div>
                     </div>
                 </div>
             </section>
@@ -290,7 +343,8 @@
                 loadAdminData(); loadUserList(); loadRepairRequests();
             }
             initDateRange();
-            loadLogs(); checkTime();
+            bindLogsRealtimeListener(); 
+            checkTime();
         }
 
         window.previewImage = (inputId, displayId) => {
@@ -298,7 +352,6 @@
             if(file) document.getElementById(displayId).innerText = "已選取：" + file.name;
         };
 
-        // 【日常打卡優化：限制每位主播在同一個小時之內，同種類型打卡只能有一次】
         window.handleDailyCheckin = (checkinType) => {
             const file = document.getElementById('imgInput').files[0];
             if(!file) return alert('請先選取日常打卡截圖！');
@@ -307,7 +360,6 @@
             const dateStr = now.toLocaleDateString('zh-TW', {year:'numeric',month:'2-digit',day:'2-digit'}).replace(/\//g,'-');
             const hourStr = now.getHours() < 10 ? '0' + now.getHours() : now.getHours();
             
-            // 比對 globalRecordsForOptions 是否存在同日期、同小時、同項目的卡紀錄
             let isAlreadyCheckedIn = false;
             globalRecordsForOptions.forEach(r => {
                 if(r.user === curUser.acc && r.type === checkinType) {
@@ -335,7 +387,6 @@
             reader.readAsDataURL(file);
         };
 
-        // 通用圖檔打卡回報（翅膀專用）
         window.handleImageCheckinGeneric = (subType, inputId) => {
             const file = document.getElementById(inputId).files[0];
             if(!file) return alert('請先選取並上傳截圖照片！');
@@ -359,14 +410,12 @@
             });
         };
 
-        // 翅膀回報提交（移除完成方式勾選）
         window.submitWingReport = () => {
             const wType = document.querySelector('input[name="wingType"]:checked').value;
             const detailText = `【翅膀回報】禮物級別：${wType}`;
             handleImageCheckinGeneric(detailText, 'wingImgInput');
         };
 
-        // 周任回報提交（移除截圖，純文字一鍵回報）
         window.submitWeekReportTextOnly = () => {
             const weekType = document.querySelector('input[name="weekType"]:checked').value;
             const weekMethod = document.querySelector('input[name="weekMethod"]:checked').value;
@@ -377,7 +426,6 @@
             });
         };
 
-        // 主播提交補卡申請（免圖）
         window.submitRepairRequest = () => {
             const rDate = document.getElementById('repairDate').value;
             const rHour = document.getElementById('repairHour').value;
@@ -395,7 +443,6 @@
             });
         };
 
-        // 管理端：加載未審核補卡申請
         function loadRepairRequests() {
             db.ref('repair_requests').on('value', snap => {
                 let h = "";
@@ -414,7 +461,6 @@
             });
         }
 
-        // 核准補卡
         window.approveRepair = (key) => {
             db.ref('repair_requests/' + key).once('value', snap => {
                 const r = snap.val();
@@ -451,11 +497,16 @@
             const scheduleCount = {};
             
             globalRecordsForOptions.forEach(r => {
-                if(r.type && r.type.includes('預約排班') && r.detail) {
+                if(r.type === '預約排班' && r.detail) {
                     const rawDetail = r.detail.trim();
-                    if (rawDetail.startsWith(selectedDate)) {
-                        let rSlot = rawDetail.substring(11).split('(')[0].trim();
-                        if(rSlot) scheduleCount[rSlot] = (scheduleCount[rSlot] || 0) + 1;
+                    const parts = rawDetail.split(' ');
+                    if (parts.length >= 2) {
+                        const recDate = parts[0]; 
+                        const recSlot = parts[1] + " " + parts[2] + " " + parts[3]; 
+                        if (recDate === selectedDate) {
+                            const cleanSlot = recSlot.split('(')[0].trim();
+                            scheduleCount[cleanSlot] = (scheduleCount[cleanSlot] || 0) + 1;
+                        }
                     }
                 }
             });
@@ -481,10 +532,11 @@
 
             let myTodayHtml = "";
             globalRecordsForOptions.forEach(r => {
-                if(r.user === curUser.acc && r.type && r.type.includes('預約排班') && r.detail) {
+                if(r.user === curUser.acc && r.type === '預約排班' && r.detail) {
                     const rawDetail = r.detail.trim();
-                    if (rawDetail.startsWith(selectedDate)) {
-                        const cleanSlot = rawDetail.substring(11).split('(')[0].trim();
+                    const parts = rawDetail.split(' ');
+                    if (parts.length >= 2 && parts[0] === selectedDate) {
+                        const cleanSlot = (parts[1] + " " + parts[2] + " " + parts[3]).split('(')[0].trim();
                         myTodayHtml += `<div class="flex justify-between items-center bg-blue-50 p-3 rounded-xl border border-blue-100 text-xs font-bold text-gray-700">
                             <span><i class="fa fa-clock-o text-blue-500"></i> ${cleanSlot}</span>
                             <button onclick="cancelSchedule('${r.key}')" class="text-red-500 border border-red-200 px-3 py-1 rounded-lg bg-white active:bg-red-50 shadow-sm font-bold">取消</button>
@@ -516,7 +568,7 @@
             const targetDetail = `${d} ${t}`;
             let isDuplicated = false;
             globalRecordsForOptions.forEach(r => {
-                if(r.user === curUser.acc && r.type && r.type.includes('預約排班')) {
+                if(r.user === curUser.acc && r.type === '預約排班') {
                     if(r.detail.split('(')[0].trim() === targetDetail) isDuplicated = true;
                 }
             });
@@ -531,7 +583,6 @@
             }
         };
 
-        // 【管理員刪除功能：所有考勤、打卡、回報數據均可一鍵從資料庫剔除】
         window.adminDeleteRecord = (key, nick) => {
             if(confirm(`⚠️ 廳長最高權限確認：\n確定要永久刪除「${nick}」的這筆資料庫回報紀錄嗎？`)) {
                 db.ref('attendance_records/' + key).remove().then(() => {
@@ -540,37 +591,78 @@
             }
         };
 
-        function loadLogs() {
-            const limitTime = Date.now() - (45 * 24 * 60 * 60 * 1000);
-            
-            db.ref('attendance_records').orderByChild('timestamp').startAt(limitTime).on('value', snap => {
+        window.clearAdminFilters = () => {
+            document.getElementById('adminSearchKeyword').value = "";
+            document.getElementById('adminSearchDate').value = "";
+            renderAdminLists();
+        };
+
+        function bindLogsRealtimeListener() {
+            /* 💡 取消 limit 限制，完整抓取實時數據包，利用異步緩衝避免頁面假死 */
+            db.ref('attendance_records').orderByChild('timestamp').on('value', snap => {
                 globalRecordsForOptions = [];
-                snap.forEach(c => { let v = c.val(); v.key = c.key; globalRecordsForOptions.push(v); });
-                updateTimeOptions();
-
-                // 畫面渲染限制最新 30 筆
-                let p = ""; let a = "";
-                const list = [...globalRecordsForOptions];
+                snap.forEach(c => { 
+                    let v = c.val(); 
+                    v.key = c.key; 
+                    globalRecordsForOptions.push(v); 
+                });
                 
-                list.reverse().slice(0, 30).forEach(r => {
-                    const isImg = r.detail && r.detail.startsWith('data:image');
-                    const cleanShowDetail = (r.type && r.type.includes('預約排班')) ? r.detail.split('(')[0].trim() : r.detail;
-                    
-                    let display = isImg ? `<img src="${r.detail}" class="record-img mx-auto" loading="lazy" onclick="window.open(this.src)">` : `<div class="bg-gray-50 p-2 rounded text-gray-500 font-bold">${cleanShowDetail}</div>`;
-                    
-                    let typeTagClass = "text-gray-400";
-                    if (r.type.includes("上班")) typeTagClass = "text-green-600 font-extrabold";
-                    if (r.type.includes("下班")) typeTagClass = "text-orange-600 font-extrabold";
-                    if (r.type === "預約排班") typeTagClass = "text-blue-600";
-                    if (r.type.includes("翅膀")) typeTagClass = "text-purple-600 font-bold";
-                    if (r.type.includes("周任")) typeTagClass = "text-indigo-600 font-bold";
+                updateTimeOptions();
+                renderAdminLists();
+            });
+        }
 
-                    const card = `<div class="p-4 bg-white rounded-2xl shadow-sm mb-1 border border-gray-100 text-[11px]">
-                        <div class="flex justify-between items-center mb-1"><span class="font-bold text-blue-600">${r.nick}</span><span class="text-gray-300 font-normal">${r.time}</span></div>
-                        <div class="${typeTagClass} mb-2 font-bold">${r.type}</div>${display}
-                    </div>`;
-                    if(r.user === curUser.acc) p += card;
+        function renderAdminLists() {
+            if (!curUser) return;
+            
+            const keyword = document.getElementById('adminSearchKeyword') ? document.getElementById('adminSearchKeyword').value.trim().toLowerCase() : "";
+            const searchDate = document.getElementById('adminSearchDate') ? document.getElementById('adminSearchDate').value : "";
 
+            let p = ""; let a = ""; 
+            let personalCount = 0; let adminMatchCount = 0;
+            
+            const list = [...globalRecordsForOptions];
+            list.reverse().forEach(r => {
+                const isImg = r.detail && r.detail.startsWith('data:image');
+                const cleanShowDetail = (r.type === '預約排班') ? r.detail.split('(')[0].trim() : r.detail;
+                
+                let display = isImg ? `<img src="${r.detail}" class="record-img mx-auto" loading="lazy" decoding="async" onclick="window.open(this.src)">` : `<div class="bg-gray-50 p-2 rounded text-gray-500 font-bold">${cleanShowDetail}</div>`;
+                
+                let typeTagClass = "text-gray-400";
+                if (r.type.includes("上班")) typeTagClass = "text-green-600 font-extrabold";
+                if (r.type.includes("下班")) typeTagClass = "text-orange-600 font-extrabold";
+                if (r.type === "預約排班") typeTagClass = "text-blue-600";
+                if (r.type.includes("翅膀")) typeTagClass = "text-purple-600 font-bold";
+                if (r.type.includes("周任")) typeTagClass = "text-indigo-600 font-bold";
+
+                const card = `<div class="p-4 bg-white rounded-2xl shadow-sm mb-1 border border-gray-100 text-[11px]">
+                    <div class="flex justify-between items-center mb-1"><span class="font-bold text-blue-600">${r.nick}</span><span class="text-gray-300 font-normal">${r.time}</span></div>
+                    <div class="${typeTagClass} mb-2 font-bold">${r.type}</div>${display}
+                </div>`;
+                
+                // 個人歷程（保留最新30筆控制手機端效能）
+                if(r.user === curUser.acc) {
+                    if (personalCount < 30) {
+                        p += card;
+                        personalCount++;
+                    }
+                }
+
+                // 後台全體動態過濾邏輯
+                let isMatch = true;
+                if (keyword) {
+                    const nickMatch = r.nick && r.nick.toLowerCase().includes(keyword);
+                    const accMatch = r.user && r.user.toLowerCase().includes(keyword);
+                    const typeMatch = r.type && r.type.toLowerCase().includes(keyword);
+                    if (!nickMatch && !accMatch && !typeMatch) isMatch = false;
+                }
+                if (searchDate) {
+                    const formattedSearchDate = searchDate.replace(/-/g, '/');
+                    if (!r.time || !r.time.includes(formattedSearchDate)) isMatch = false;
+                }
+
+                if (isMatch) {
+                    adminMatchCount++;
                     const adminCard = `<div class="p-4 bg-white rounded-2xl shadow-sm border border-gray-100 text-[11px]">
                         <div class="flex justify-between items-center mb-1">
                             <span class="font-bold text-gray-700">${r.nick} (${r.user})</span>
@@ -583,14 +675,16 @@
                         <div class="mt-2">${display}</div>
                     </div>`;
                     a += adminCard;
-                });
-                document.getElementById('personalList').innerHTML = p || "<p class='col-span-full text-center text-gray-400 py-4'>目前無紀錄</p>";
-                document.getElementById('adminAllList').innerHTML = a || "<p class='col-span-full text-center text-gray-400 py-4'>目前無紀錄</p>";
+                }
             });
+
+            if(document.getElementById('personalList')) document.getElementById('personalList').innerHTML = p || "<p class='col-span-full text-center text-gray-400 py-4'>目前無紀錄</p>";
+            if(document.getElementById('adminAllList')) document.getElementById('adminAllList').innerHTML = a || "<p class='col-span-full text-center text-gray-400 py-4'>找不到符合篩選條件的數據</p>";
+            if(document.getElementById('adminMatchCount')) document.getElementById('adminMatchCount').innerText = adminMatchCount;
         }
 
         window.exportToExcel = () => {
-            alert('系統正在索取完整數據包，請稍候...');
+            alert('系統正在索取完整 45 天數據包，請稍候...');
             const limitTime = Date.now() - (45 * 24 * 60 * 60 * 1000);
             
             db.ref('attendance_records').orderByChild('timestamp').startAt(limitTime).once('value', snap => {
@@ -608,7 +702,7 @@
                 const data = fullRecords.reverse().map(r => {
                     const t = r.time ? r.time.split(' ') : ["未知", "未知"];
                     const isImg = r.detail && r.detail.startsWith('data:image');
-                    const cleanExcelDetail = (r.type && r.type.includes('預約排班')) ? r.detail.split('(')[0].trim() : (isImg ? "（已正常提交截圖，請至系統核對圖檔）" : r.detail);
+                    const cleanExcelDetail = (r.type === '預約排班') ? r.detail.split('(')[0].trim() : (isImg ? "（已正常提交截圖，請至系統核對圖檔）" : r.detail);
                     
                     return { 
                         "成員暱稱": r.nick, "成員帳號": r.user, 

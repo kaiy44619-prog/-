@@ -15,7 +15,6 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; }
         
-        /* 圖片高效渲染與佔位漸變 */
         .record-img { 
             max-width: 100%; 
             max-height: 280px; 
@@ -30,19 +29,10 @@
             animation: shine 1.5s infinite linear;
             will-change: transform;
         }
-        @keyframes shine {
-            to { background-position-x: -200%; }
-        }
-        
-        .scroll-container {
-            -webkit-overflow-scrolling: touch;
-            will-change: transform;
-        }
-
+        @keyframes shine { to { background-position-x: -200%; } }
+        .scroll-container { -webkit-overflow-scrolling: touch; will-change: transform; }
         .disabled-btn { background-color: #d1d5db !important; cursor: not-allowed !important; color: #9ca3af !important; }
         body { -webkit-tap-highlight-color: transparent; }
-        
-        /* 輕量級進度提示 */
         .loading-text { color: #9ca3af; font-size: 13px; text-align: center; padding: 30px 0; font-weight: bold; width: 100%; }
     </style>
 </head>
@@ -89,12 +79,9 @@
             <section id="schedule" class="tab-content active bg-white p-6 rounded-2xl border">
                 <h3 class="font-bold mb-2 text-sm text-gray-700">1. 選擇預約日期 (僅限3天內)</h3>
                 <input type="date" id="dateInput" class="w-full p-4 border rounded-xl mb-4 bg-gray-50 text-sm font-bold" onchange="updateTimeOptions()">
-                
                 <h3 class="font-bold mb-2 text-sm text-gray-700">2. 選擇排班時段 (每時段限4人)</h3>
                 <select id="timeInput" class="w-full p-4 border rounded-xl mb-4 bg-gray-50 text-sm font-bold"></select>
-                
                 <button onclick="submitSchedule()" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold shadow-md active:scale-95 transition mb-6">送出預約排班</button>
-                
                 <hr class="my-4">
                 <h4 class="font-bold text-xs text-blue-600 mb-2"><i class="fa fa-calendar-check-o"></i> 您當天已預約的時段：</h4>
                 <div id="myTodayScheduleList" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto scroll-container"><div class="loading-text"><i class="fa fa-spinner fa-spin"></i> 排班資料加載中...</div></div>
@@ -111,8 +98,6 @@
                     </label>
                 </div>
                 <div id="checkinBtnContainer" class="mb-6"></div>
-
-                <!-- 補打卡申請功能區 -->
                 <div class="border-t pt-6 text-left">
                     <h4 class="font-bold text-sm text-gray-700 mb-2"><i class="fa fa-calendar-plus-o text-red-500"></i> 忘記打卡？向管理員申請補卡</h4>
                     <div class="bg-gray-50 p-4 rounded-xl space-y-3 border text-xs">
@@ -176,11 +161,11 @@
                     <div>
                         <span class="block font-bold text-gray-700 mb-2">2. 請選擇完成方式：</span>
                         <div class="flex gap-4 bg-gray-50 p-3 rounded-xl border font-bold">
-                            <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="weekMethod" value="累積" checked> 累積完成</label>
-                            <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="weekMethod" value="一次完成"> 一開完成</label>
+                            <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="weekMethod" value="累積完成" checked> 累積完成</label>
+                            <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="weekMethod" value="一次完成"> 一次完成</label>
                         </div>
                     </div>
-                    <button onclick="submitWeekReportTextOnly()" class="w-full bg-green-600 text-white py-4 rounded-xl font-bold shadow-md active:scale-95 transition">一鍵提交周任回報(無需截圖)</button>
+                    <button onclick="submitWeekReportToAdmin()" class="w-full bg-green-600 text-white py-4 rounded-xl font-bold shadow-md active:scale-95 transition">提交周任回報 (需經廳長審核)</button>
                 </div>
             </section>
 
@@ -205,15 +190,19 @@
                 
                 <h4 class="font-bold text-sm mb-3 text-gray-600">數據報表匯出</h4>
                 <button onclick="exportToExcel()" class="max-w-md bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-2xl shadow-lg mb-6 flex justify-center items-center gap-2 active:scale-95 transition">
-                    <i class="fa fa-file-excel-o"></i> 導出 45 天考勤整合報表
+                    <i class="fa fa-file-excel-o"></i> 導出 45 定考勤整合報表
                 </button>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <!-- 左側邊欄：審核專區 -->
                     <div class="md:col-span-1 space-y-6">
                         <div>
+                            <h4 class="font-bold text-sm mb-2 text-green-600"><i class="fa fa-tasks"></i> 待審核周任申請</h4>
+                            <div id="adminWeekList" class="space-y-2 bg-green-50/50 p-2 rounded-xl border border-green-100 min-h-[60px] max-h-48 overflow-y-auto scroll-container"><div class="loading-text"><i class="fa fa-spinner fa-spin"></i> 載入中...</div></div>
+                        </div>
+                        <div>
                             <h4 class="font-bold text-sm mb-2 text-red-500"><i class="fa fa-calendar-plus-o"></i> 待審核補卡申請</h4>
-                            <div id="adminRepairList" class="space-y-2 bg-red-50/50 p-2 rounded-xl border border-red-100 min-h-[60px] max-h-60 overflow-y-auto scroll-container"><div class="loading-text"><i class="fa fa-spinner fa-spin"></i> 載入中...</div></div>
+                            <div id="adminRepairList" class="space-y-2 bg-red-50/50 p-2 rounded-xl border border-red-100 min-h-[60px] max-h-48 overflow-y-auto scroll-container"><div class="loading-text"><i class="fa fa-spinner fa-spin"></i> 載入中...</div></div>
                         </div>
                         <div>
                             <h4 class="font-bold text-sm mb-2 text-gray-600">待審核加入申請</h4>
@@ -221,7 +210,7 @@
                         </div>
                         <div>
                             <h4 class="font-bold text-sm mb-2 text-gray-600">家族成員 (<span id="userCount">0</span>)</h4>
-                            <div id="userList" class="space-y-2 max-h-60 overflow-y-auto bg-gray-50 p-2 rounded-xl border scroll-container"><div class="loading-text"><i class="fa fa-spinner fa-spin"></i> 載入中...</div></div>
+                            <div id="userList" class="space-y-2 max-h-48 overflow-y-auto bg-gray-50 p-2 rounded-xl border scroll-container"><div class="loading-text"><i class="fa fa-spinner fa-spin"></i> 載入中...</div></div>
                         </div>
                     </div>
                     
@@ -301,7 +290,6 @@
                 container.innerHTML = `<button class="w-full disabled-btn text-white py-4 rounded-xl font-bold shadow-md" disabled>非打卡時段 (開放時段：58分 ~ 03分)</button>`;
             }
         }
-        setInterval(checkTime, 1000);
 
         window.toggleAuth = (isReg) => {
             document.getElementById('loginForm').classList.toggle('hidden', isReg);
@@ -311,12 +299,15 @@
         document.getElementById('loginBtn').onclick = () => {
             const acc = document.getElementById('loginAcc').value.trim().toLowerCase();
             const pwd = document.getElementById('loginPwd').value.trim();
-            if(acc === 'admin' && pwd === '123') loginOk({ acc:'admin', nick:'岳笙', role:'admin' });
-            else {
+            if(!acc || !pwd) return alert('請填寫帳號與密碼');
+            
+            if(acc === 'admin' && pwd === '123') {
+                loginOk({ acc:'admin', nick:'岳笙', role:'admin' });
+            } else {
                 db.ref('users/'+acc).once('value', snap => {
                     const d = snap.val();
                     if(d && d.pwd === pwd) loginOk({...d, role:'user'});
-                    else alert('帳密錯誤或未核准');
+                    else alert('帳密錯誤或管理員未核准您的註冊申請');
                 });
             }
         };
@@ -325,7 +316,7 @@
             const acc = document.getElementById('regAcc').value.trim().toLowerCase();
             const nick = document.getElementById('regNick').value.trim();
             const pwd = document.getElementById('regPwd').value.trim();
-            if(!acc || !nick || !pwd) return alert('請填寫完整');
+            if(!acc || !nick || !pwd) return alert('請填寫完整註冊資料');
             db.ref('pending_users/'+acc).set({ acc, nick, pwd, timestamp: Date.now() }).then(() => { alert('已提交！請聯絡岳笙審核。'); toggleAuth(false); });
         };
 
@@ -340,11 +331,12 @@
                 nav.className = "grid grid-cols-3 sm:grid-cols-7 bg-white rounded-2xl shadow-sm mb-4 p-1 border text-xs gap-1 text-center";
                 nav.innerHTML += `<button class="py-3 rounded-xl font-bold nav-btn border border-red-100 text-red-600" data-target="admin"><i class="fa fa-cog"></i> 最高管理</button>`;
                 bindNavEvents(); 
-                loadAdminData(); loadUserList(); loadRepairRequests();
+                loadAdminData(); loadUserList(); loadRepairRequests(); loadWeekRequests();
             }
             initDateRange();
             bindLogsRealtimeListener(); 
             checkTime();
+            setInterval(checkTime, 5000);
         }
 
         window.previewImage = (inputId, displayId) => {
@@ -365,16 +357,12 @@
                 if(r.user === curUser.acc && r.type === checkinType) {
                     if(r.time && r.time.includes(dateStr)) {
                         const loggedHour = r.time.split(' ')[1].split(':')[0];
-                        if(loggedHour == hourStr) {
-                            isAlreadyCheckedIn = true;
-                        }
+                        if(loggedHour == hourStr) isAlreadyCheckedIn = true;
                     }
                 }
             });
 
-            if(isAlreadyCheckedIn) {
-                return alert(`🚨 提示：您在這個時段已經辦理過【${checkinType}】囉，請勿重複提交！`);
-            }
+            if(isAlreadyCheckedIn) return alert(`🚨 提示：您在這個時段已經辦理過【${checkinType}】囉，請勿重複提交！`);
 
             const reader = new FileReader();
             reader.onload = (e) => {
@@ -416,14 +404,53 @@
             handleImageCheckinGeneric(detailText, 'wingImgInput');
         };
 
-        window.submitWeekReportTextOnly = () => {
+        // 周任務回報送審機制
+        window.submitWeekReportToAdmin = () => {
             const weekType = document.querySelector('input[name="weekType"]:checked').value;
             const weekMethod = document.querySelector('input[name="weekMethod"]:checked').value;
-            const detailText = `（純文字自助登記成功）完成進度：${weekMethod}`;
             
-            sendRecord(`【周任回報】級別：${weekType}`, detailText).then(() => {
-                alert('🎉 周任務進度已成功登記歸檔！');
+            db.ref('week_requests').push({
+                user: curUser.acc, nick: curUser.nick,
+                weekType: weekType, weekMethod: weekMethod,
+                timestamp: Date.now()
+            }).then(() => {
+                alert('🎉 周任務回報已提交！請等待廳長後台審核核准。');
             });
+        };
+
+        // 載入與監聽待審核周任
+        function loadWeekRequests() {
+            db.ref('week_requests').on('value', snap => {
+                let h = "";
+                snap.forEach(c => {
+                    const r = c.val();
+                    h += `<div class="p-3 bg-white rounded-xl border border-green-200 text-[11px] space-y-2 shadow-sm">
+                        <div><b>${r.nick}</b> 回報周任務</div>
+                        <div class="text-gray-500">級別：<span class="text-green-600 font-bold">${r.weekType}任務</span><br>方式：${r.weekMethod}</div>
+                        <div class="flex gap-2 justify-end">
+                            <button onclick="rejectWeek('${c.key}')" class="px-2 py-1 text-gray-400 border rounded-lg hover:bg-gray-50">拒絕</button>
+                            <button onclick="approveWeek('${c.key}')" class="px-3 py-1 bg-green-500 text-white font-bold rounded-lg shadow-sm hover:bg-green-600">核准</button>
+                        </div>
+                    </div>`;
+                });
+                document.getElementById('adminWeekList').innerHTML = h || "<p class='text-gray-400 text-center py-2 text-xs w-full'>目前無周任申請</p>";
+            });
+        }
+
+        window.approveWeek = (key) => {
+            db.ref('week_requests/' + key).once('value', snap => {
+                const r = snap.val();
+                if(!r) return;
+                const detailText = `（管理員審核成功）完成進度：${r.weekMethod}`;
+                sendRecord(`【周任回報】級別：${r.weekType}`, detailText).then(() => {
+                    db.ref('week_requests/' + key).remove();
+                    alert('已核准該筆周任務回報！');
+                });
+            });
+        };
+
+        window.rejectWeek = (key) => {
+            if(confirm('確定要拒絕這筆周任務回報嗎？')) db.ref('week_requests/' + key).remove();
         };
 
         window.submitRepairRequest = () => {
@@ -493,7 +520,6 @@
             const formatDate = (d) => d.toLocaleDateString('zh-TW', {year:'numeric',month:'2-digit',day:'2-digit'}).replace(/\//g,'-');
             const todayStr = formatDate(now);
             const currentHour = now.getHours();
-
             const scheduleCount = {};
             
             globalRecordsForOptions.forEach(r => {
@@ -598,7 +624,6 @@
         };
 
         function bindLogsRealtimeListener() {
-            /* 💡 取消 limit 限制，完整抓取實時數據包，利用異步緩衝避免頁面假死 */
             db.ref('attendance_records').orderByChild('timestamp').on('value', snap => {
                 globalRecordsForOptions = [];
                 snap.forEach(c => { 
@@ -606,7 +631,6 @@
                     v.key = c.key; 
                     globalRecordsForOptions.push(v); 
                 });
-                
                 updateTimeOptions();
                 renderAdminLists();
             });
@@ -614,18 +638,16 @@
 
         function renderAdminLists() {
             if (!curUser) return;
-            
             const keyword = document.getElementById('adminSearchKeyword') ? document.getElementById('adminSearchKeyword').value.trim().toLowerCase() : "";
             const searchDate = document.getElementById('adminSearchDate') ? document.getElementById('adminSearchDate').value : "";
 
             let p = ""; let a = ""; 
             let personalCount = 0; let adminMatchCount = 0;
-            
             const list = [...globalRecordsForOptions];
+            
             list.reverse().forEach(r => {
                 const isImg = r.detail && r.detail.startsWith('data:image');
                 const cleanShowDetail = (r.type === '預約排班') ? r.detail.split('(')[0].trim() : r.detail;
-                
                 let display = isImg ? `<img src="${r.detail}" class="record-img mx-auto" loading="lazy" decoding="async" onclick="window.open(this.src)">` : `<div class="bg-gray-50 p-2 rounded text-gray-500 font-bold">${cleanShowDetail}</div>`;
                 
                 let typeTagClass = "text-gray-400";
@@ -640,15 +662,10 @@
                     <div class="${typeTagClass} mb-2 font-bold">${r.type}</div>${display}
                 </div>`;
                 
-                // 個人歷程（保留最新30筆控制手機端效能）
                 if(r.user === curUser.acc) {
-                    if (personalCount < 30) {
-                        p += card;
-                        personalCount++;
-                    }
+                    if (personalCount < 30) { p += card; personalCount++; }
                 }
 
-                // 後台全體動態過濾邏輯
                 let isMatch = true;
                 if (keyword) {
                     const nickMatch = r.nick && r.nick.toLowerCase().includes(keyword);

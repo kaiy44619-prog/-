@@ -242,22 +242,21 @@
         let globalRecordsForOptions = [];
         let adminCurrentLimit = 20;
 
-      const firebaseConfig = {
-apiKey: “AIzaSyA39fdKxRtNh_-MfrhpzzqtOu1MV9VE7VM”,
-authDomain: “yuesheng-system-56669.firebaseapp.com”,
-databaseURL: “https://yuesheng-system-56669-default-rtdb.asia-southeast1.firebasedatabase.app”,
-projectId: “yuesheng-system-56669”,
-storageBucket: “yuesheng-system-56669.firebasestorage.app”,
-messagingSenderId: “747414817349”,
-appId: “1:747414817349:web:ce06a488187dcf88ca712c”,
-measurementId: “G-PKZ7DTZ7QD”
+      // Import the functions you need from the SDKs you need
+const firebaseConfig = {
+  apiKey: "AIzaSyB7e1itC17IxcSpNN1eBnLuTI43uHZ-fYQ",
+  authDomain: "yuesheng-system.firebaseapp.com",
+  databaseURL: "https://yuesheng-system-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "yuesheng-system",
+  storageBucket: "yuesheng-system.firebasestorage.app",
+  messagingSenderId: "975395892406",
+  appId: "1:975395892406:web:97dabd72e189c4e79aca17"
 };
 
 firebase.initializeApp(firebaseConfig);
 db = firebase.database();
 
-console.log(“Firebase 雲端核心載入成功”);
-
+console.log("Firebase連線成功");
         function initDateRange() {
             const today = new Date();
             const day3 = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);

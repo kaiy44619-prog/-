@@ -399,57 +399,23 @@ async function uploadToCloudinary(file) {
         }
 
         window.handleDailyCheckin = async (checkinType) => {
-
-    const file =
-    document.getElementById("imgInput").files[0];
-
-    if(!file){
-        return alert("請先選取打卡圖片");
-    }
+    const file = document.getElementById("imgInput").files[0];
+    if(!file) return alert("請先選取打卡圖片");
 
     try{
+        const imageUrl = await uploadToCloudinary(file);
+        await sendRecord(checkinType, imageUrl);
+        saveToLocalHistory(checkinType, true);
 
-        const imageUrl =
-        await uploadToCloudinary(file);
-
-        await sendRecord(
-            checkinType,
-            imageUrl
-        );
-
-        saveToLocalHistory(
-            checkinType,
-            true
-        );
-
-        document.getElementById("imgInput").value="";
-
-        document.getElementById("fileNameDisplay").innerText=
+        document.getElementById("imgInput").value = "";
+        document.getElementById("fileNameDisplay").innerText =
         "點擊選取、拖曳或拍攝日常打卡截圖";
 
         alert("🎉 打卡成功");
-
     }catch(err){
-
         console.error(err);
-
         alert("圖片上傳失敗");
-
     }
-
-};
-
-            if(isAlreadyCheckedIn) return alert(`🚨 提示：您在這個時段已經辦理過【${checkinType}】囉，請勿重複提交！`);
-
-           sendRecord(checkinType, "已完成打卡").then(() => {
-    saveToLocalHistory(checkinType, false);
-
-    document.getElementById('imgInput').value = "";
-    document.getElementById('fileNameDisplay').innerText =
-    "點擊選取、拖曳或拍攝日常打卡截圖";
-
-    alert(`🎉 ${checkinType}成功！`);
-});
 };            
         window.handleImageCheckinGeneric =
 async (subType,inputId,logTypeName)=>{

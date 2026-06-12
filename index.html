@@ -80,7 +80,6 @@
                 <h3 class="font-bold mb-2 text-sm text-gray-700">2. 選擇排班時段 (每時段限4人)</h3>
                 <select id="timeInput" class="w-full p-4 border rounded-xl mb-4 bg-gray-50 text-sm font-bold"></select>
                 <button onclick="submitSchedule()" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold shadow-md active:scale-95 transition mb-6">送出預約排班</button>
-                <hr class="my-4">
                 <h4 class="font-bold text-xs text-blue-600 mb-2"><i class="fa fa-calendar-check-o"></i> 您當天已預約的時段：</h4>
                 <div id="myTodayScheduleList" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto scroll-container"><div class="loading-text"><i class="fa fa-spinner fa-spin"></i> 排班資料加載中...</div></div>
             </section>
@@ -237,20 +236,22 @@
     </div>
 
     <script>
-        const firebaseConfig = {
-          apiKey: "AIzaSyA39fdKxRtNh_-MfrhpzzqtOu1MV9VE7VM",
-          authDomain: "yuesheng-system-56669.firebaseapp.com",
-          databaseURL: "https://yuesheng-system-56669-default-rtdb.asia-southeast1.firebasedatabase.app",
-          projectId: "yuesheng-system-56669",
-          appId: "1:747414817349:web:ce06a488187dcf88ca712c"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
+        // 核心安全修改：從外部獨立環境配置檔案讀取金鑰，徹底防止 GitHub 安全機制封鎖
+        let db = null;
         let curUser = null;
         let globalRecordsForOptions = [];
-        
-        // 分頁控管用變數
         let adminCurrentLimit = 20;
+
+        fetch('./config.json')
+            .then(res => res.json())
+            .then(config => {
+                firebase.initializeApp(config);
+                db = firebase.database();
+                console.log("Firebase 雲端核心安全載入成功");
+            })
+            .catch(err => {
+                alert("【系統阻斷】未偵測到本地安全憑證配置檔，請確保 config.json 存在於同級目錄中！");
+            });
 
         function initDateRange() {
             const today = new Date();
@@ -297,6 +298,7 @@
         };
 
         document.getElementById('loginBtn').onclick = () => {
+            if(!db) return alert('資料庫尚未連線，請重新整理頁面');
             const acc = document.getElementById('loginAcc').value.trim().toLowerCase();
             const pwd = document.getElementById('loginPwd').value.trim();
             if(!acc || !pwd) return alert('請填寫帳號與密碼');
@@ -313,6 +315,7 @@
         };
 
         document.getElementById('regBtn').onclick = () => {
+            if(!db) return alert('資料庫尚未連線');
             const acc = document.getElementById('regAcc').value.trim().toLowerCase();
             const nick = document.getElementById('regNick').value.trim();
             const pwd = document.getElementById('regPwd').value.trim();
@@ -345,7 +348,6 @@
             if(file) document.getElementById(displayId).innerText = "已選取：" + file.name;
         };
 
-        // 核心修改：寫入個人本地留存快取
         function saveToLocalHistory(type, isImg = false) {
             try {
                 const logs = JSON.parse(localStorage.getItem('jinho_local_logs')) || [];
@@ -354,7 +356,7 @@
                     type: type,
                     status: isImg ? "圖片已同步至雲端庫並儲存在本機" : "文字數據已送審/寫入"
                 });
-                localStorage.setItem('jinho_local_logs', JSON.stringify(logs.slice(0, 50))); // 最多留50條
+                localStorage.setItem('jinho_local_logs', JSON.stringify(logs.slice(0, 50)));
                 renderLocalLogsView();
             } catch(e) { console.error(e); }
         }
@@ -389,7 +391,7 @@
             const reader = new FileReader();
             reader.onload = (e) => {
                 sendRecord(checkinType, e.target.result).then(() => {
-                    saveToLocalHistory(checkinType, true); // 寫入本機裝置留存
+                    saveToLocalHistory(checkinType, true);
                     document.getElementById('imgInput').value = "";
                     document.getElementById('fileNameDisplay').innerText = "點擊選取、拖曳或拍攝日常打卡截圖";
                     alert(`🎉 ${checkinType}成功！`);
@@ -405,7 +407,7 @@
             const reader = new FileReader();
             reader.onload = (e) => {
                 sendRecord(subType, e.target.result).then(() => {
-                    saveToLocalHistory(logTypeName, true); // 寫入本機裝置留存
+                    saveToLocalHistory(logTypeName, true);
                     document.getElementById(inputId).value = "";
                     document.getElementById('wingFileName').innerText = "點擊選取或拍攝翅膀收禮截圖";
                     alert(`回報成功！已寫入紀錄。`);
@@ -429,7 +431,6 @@
             handleImageCheckinGeneric(detailText, 'wingImgInput', `翅膀回報(${wType})`);
         };
 
-        // 周任務回報送審機制
         window.submitWeekReportToAdmin = () => {
             const weekType = document.querySelector('input[name="weekType"]:checked').value;
             const weekMethod = document.querySelector('input[name="weekMethod"]:checked').value;
@@ -444,7 +445,6 @@
             });
         };
 
-        // 載入與監聽待審核周任
         function loadWeekRequests() {
             db.ref('week_requests').on('value', snap => {
                 let h = "";
@@ -653,13 +653,11 @@
             resetAdminPagination();
         };
 
-        // 搜尋或日期變更時，重置資料分頁行數
         window.resetAdminPagination = () => {
             adminCurrentLimit = 20;
             renderAdminLists();
         };
 
-        // 按鈕觸發載入後續 20 筆
         window.loadMoreAdminData = () => {
             adminCurrentLimit += 20;
             renderAdminLists();
@@ -678,16 +676,15 @@
             });
         }
 
-        // 核心修改：效能優化與最高管理權限分流渲染邏輯
         function renderAdminLists() {
-            if (!curUser) return;
+            if (!curUser || !db) return;
             const keyword = document.getElementById('adminSearchKeyword') ? document.getElementById('adminSearchKeyword').value.trim().toLowerCase() : "";
             const searchDate = document.getElementById('adminSearchDate') ? document.getElementById('adminSearchDate').value : "";
 
             let p = ""; let a = ""; 
             let personalCount = 0; 
-            let adminMatchCount = 0; // 符合過濾條件的總資料筆數
-            let renderedCount = 0;   // 實際被畫到螢幕上的筆數（用來控管 20 筆上限）
+            let adminMatchCount = 0; 
+            let renderedCount = 0;   
             
             const list = [...globalRecordsForOptions];
             const reversedList = list.reverse();
@@ -696,7 +693,6 @@
                 const isImg = r.detail && r.detail.startsWith('data:image');
                 const cleanShowDetail = (r.type === '預約排班') ? r.detail.split('(')[0].trim() : r.detail;
                 
-                // --- 1. 個人歷程區的圖片顯示邏輯 (維持原樣) ---
                 let personalDisplay = isImg ? `<img src="${r.detail}" class="record-img mx-auto" loading="lazy" decoding="async" onclick="window.open(this.src)">` : `<div class="bg-gray-50 p-2 rounded text-gray-500 font-bold">${cleanShowDetail}</div>`;
                 
                 let typeTagClass = "text-gray-400";
@@ -715,7 +711,6 @@
                     if (personalCount < 30) { p += personalCard; personalCount++; }
                 }
 
-                // --- 2. 管理後台篩選與分流優化邏輯 ---
                 let isMatch = true;
                 if (keyword) {
                     const nickMatch = r.nick && r.nick.toLowerCase().includes(keyword);
@@ -729,19 +724,14 @@
                 }
 
                 if (isMatch) {
-                    adminMatchCount++; // 統計符合條件的總筆數
+                    adminMatchCount++; 
 
-                    // 只有在當前分頁限制額度內 (例如前 20 筆)，才真正拼接 HTML 渲染出來
                     if (renderedCount < adminCurrentLimit) {
-                        
-                        // 核心需求：最高管理權限隱藏普通打卡回傳圖，只看翅膀圖片
                         let adminDisplay = "";
                         if (isImg) {
-                            // 如果是翅膀回報，強制顯示圖片，並使用 loading="lazy" 防卡頓
                             if (r.type.includes("翅膀")) {
                                 adminDisplay = `<img src="${r.detail}" class="record-img mx-auto" loading="lazy" decoding="async" onclick="window.open(this.src)">`;
                             } else {
-                                // 如果是上班或下班打卡，隱藏圖片，改顯示純文字提示
                                 adminDisplay = `<div class="bg-gray-100 p-3 rounded-xl text-gray-400 font-medium text-center"><i class="fa fa-eye-slash"></i> 系統已隱藏日常打卡圖（文字記錄正常留存）</div>`;
                             }
                         } else {
@@ -770,7 +760,6 @@
             if(document.getElementById('adminAllList')) document.getElementById('adminAllList').innerHTML = a || "<p class='col-span-full text-center text-gray-400 py-4'>找不到符合篩選條件的數據</p>";
             if(document.getElementById('adminMatchCount')) document.getElementById('adminMatchCount').innerText = adminMatchCount;
 
-            // 控制「載入更多」按鈕的狀態
             const loadMoreBtn = document.getElementById('loadMoreAdminBtn');
             if (loadMoreBtn) {
                 if (adminMatchCount <= adminCurrentLimit) {
@@ -786,6 +775,7 @@
         }
 
         window.exportToExcel = () => {
+            if(!db) return alert('資料庫未連線');
             alert('系統正在索取完整 45 天數據包，請稍候...');
             const limitTime = Date.now() - (45 * 24 * 60 * 60 * 1000);
             

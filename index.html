@@ -257,6 +257,32 @@ firebase.initializeApp(firebaseConfig);
 db = firebase.database();
 
 console.log("Firebase連線成功");
+        const CLOUD_NAME = "dxfnvpflp";
+const UPLOAD_PRESET = "jinhao_upload";
+
+async function uploadToCloudinary(file) {
+
+    const formData = new FormData();
+
+    formData.append("file", file);
+    formData.append("upload_preset", UPLOAD_PRESET);
+
+    const res = await fetch(
+        `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+        {
+            method: "POST",
+            body: formData
+        }
+    );
+
+    const data = await res.json();
+
+    if (!data.secure_url) {
+        throw new Error("Cloudinary上傳失敗");
+    }
+
+    return data.secure_url;
+}
         function initDateRange() {
             const today = new Date();
             const day3 = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
@@ -372,23 +398,46 @@ console.log("Firebase連線成功");
             container.innerHTML = logs.map(l => `<div class="p-2 bg-gray-50 border rounded-lg"><b>[${l.time}]</b> ${l.type} - <span class="text-green-600">${l.status}</span></div>`).join('') || "<p class='text-gray-400 text-center py-2'>本機尚無提交留存紀錄</p>";
         }
 
-        window.handleDailyCheckin = (checkinType) => {
-            const file = document.getElementById('imgInput').files[0];
-            if(!file) return alert('請先選取日常打卡截圖！');
+        window.handleDailyCheckin = async (checkinType) => {
 
-            const now = new Date();
-            const dateStr = now.toLocaleDateString('zh-TW', {year:'numeric',month:'2-digit',day:'2-digit'}).replace(/\//g,'-');
-            const hourStr = now.getHours() < 10 ? '0' + now.getHours() : now.getHours();
-            
-            let isAlreadyCheckedIn = false;
-            globalRecordsForOptions.forEach(r => {
-                if(r.user === curUser.acc && r.type === checkinType) {
-                    if(r.time && r.time.includes(dateStr)) {
-                        const loggedHour = r.time.split(' ')[1].split(':')[0];
-                        if(loggedHour == hourStr) isAlreadyCheckedIn = true;
-                    }
-                }
-            });
+    const file =
+    document.getElementById("imgInput").files[0];
+
+    if(!file){
+        return alert("請先選取打卡圖片");
+    }
+
+    try{
+
+        const imageUrl =
+        await uploadToCloudinary(file);
+
+        await sendRecord(
+            checkinType,
+            imageUrl
+        );
+
+        saveToLocalHistory(
+            checkinType,
+            true
+        );
+
+        document.getElementById("imgInput").value="";
+
+        document.getElementById("fileNameDisplay").innerText=
+        "點擊選取、拖曳或拍攝日常打卡截圖";
+
+        alert("🎉 打卡成功");
+
+    }catch(err){
+
+        console.error(err);
+
+        alert("圖片上傳失敗");
+
+    }
+
+};
 
             if(isAlreadyCheckedIn) return alert(`🚨 提示：您在這個時段已經辦理過【${checkinType}】囉，請勿重複提交！`);
 
@@ -402,19 +451,46 @@ console.log("Firebase連線成功");
     alert(`🎉 ${checkinType}成功！`);
 });
 };            
-        window.handleImageCheckinGeneric = (subType, inputId, logTypeName) => {
+        window.handleImageCheckinGeneric =
+async (subType,inputId,logTypeName)=>{
 
-    sendRecord(subType, "已提交").then(() => {
+    const file =
+    document.getElementById(inputId).files[0];
 
-        saveToLocalHistory(logTypeName, false);
+    if(!file){
+        return alert("請先選擇圖片");
+    }
 
-        document.getElementById(inputId).value = "";
+    try{
 
-        document.getElementById('wingFileName').innerText =
+        const imageUrl =
+        await uploadToCloudinary(file);
+
+        await sendRecord(
+            subType,
+            imageUrl
+        );
+
+        saveToLocalHistory(
+            logTypeName,
+            true
+        );
+
+        document.getElementById(inputId).value="";
+
+        document.getElementById("wingFileName").innerText=
         "點擊選取或拍攝翅膀收禮截圖";
 
-        alert("回報成功！");
-    });
+        alert("回報成功");
+
+    }catch(err){
+
+        console.error(err);
+
+        alert("圖片上傳失敗");
+
+    }
+
 };
         window.sendRecord = (type, detail, customTimeStr = null) => {
             const targetTimeStr = customTimeStr ? customTimeStr : new Date().toLocaleString('zh-TW', {hour12:false});
@@ -690,7 +766,12 @@ console.log("Firebase連線成功");
             const reversedList = list.reverse();
 
             reversedList.forEach(r => {
-                const isImg = r.detail && r.detail.startsWith('data:image');
+            const isImg =
+r.detail &&
+(
+    r.detail.startsWith('data:image') ||
+    r.detail.startsWith('https://res.cloudinary.com')
+);
                 const cleanShowDetail = (r.type === '預約排班') ? r.detail.split('(')[0].trim() : r.detail;
                 
                 let personalDisplay = isImg ? `<img src="${r.detail}" class="record-img mx-auto" loading="lazy" decoding="async" onclick="window.open(this.src)">` : `<div class="bg-gray-50 p-2 rounded text-gray-500 font-bold">${cleanShowDetail}</div>`;

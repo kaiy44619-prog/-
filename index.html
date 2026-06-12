@@ -242,16 +242,21 @@
         let globalRecordsForOptions = [];
         let adminCurrentLimit = 20;
 
-        fetch('./config.json')
-            .then(res => res.json())
-            .then(config => {
-                firebase.initializeApp(config);
-                db = firebase.database();
-                console.log("Firebase 雲端核心安全載入成功");
-            })
-            .catch(err => {
-                alert("【系統阻斷】未偵測到本地安全憑證配置檔，請確保 config.json 存在於同級目錄中！");
-            });
+      const firebaseConfig = {
+apiKey: “AIzaSyA39fdKxRtNh_-MfrhpzzqtOu1MV9VE7VM”,
+authDomain: “yuesheng-system-56669.firebaseapp.com”,
+databaseURL: “https://yuesheng-system-56669-default-rtdb.asia-southeast1.firebasedatabase.app”,
+projectId: “yuesheng-system-56669”,
+storageBucket: “yuesheng-system-56669.firebasestorage.app”,
+messagingSenderId: “747414817349”,
+appId: “1:747414817349:web:ce06a488187dcf88ca712c”,
+measurementId: “G-PKZ7DTZ7QD”
+};
+
+firebase.initializeApp(firebaseConfig);
+db = firebase.database();
+
+console.log(“Firebase 雲端核心載入成功”);
 
         function initDateRange() {
             const today = new Date();

@@ -392,34 +392,29 @@ console.log("Firebase連線成功");
 
             if(isAlreadyCheckedIn) return alert(`🚨 提示：您在這個時段已經辦理過【${checkinType}】囉，請勿重複提交！`);
 
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                sendRecord(checkinType, e.target.result).then(() => {
-                    saveToLocalHistory(checkinType, true);
-                    document.getElementById('imgInput').value = "";
-                    document.getElementById('fileNameDisplay').innerText = "點擊選取、拖曳或拍攝日常打卡截圖";
-                    alert(`🎉 ${checkinType}成功！`);
-                });
-            };
-            reader.readAsDataURL(file);
-        };
+           sendRecord(checkinType, "已完成打卡").then(() => {
+    saveToLocalHistory(checkinType, false);
 
+    document.getElementById('imgInput').value = "";
+    document.getElementById('fileNameDisplay').innerText =
+    "點擊選取、拖曳或拍攝日常打卡截圖";
+
+    alert(`🎉 ${checkinType}成功！`);
+});
         window.handleImageCheckinGeneric = (subType, inputId, logTypeName) => {
-            const file = document.getElementById(inputId).files[0];
-            if(!file) return alert('請先選取並上傳截圖照片！');
-            
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                sendRecord(subType, e.target.result).then(() => {
-                    saveToLocalHistory(logTypeName, true);
-                    document.getElementById(inputId).value = "";
-                    document.getElementById('wingFileName').innerText = "點擊選取或拍攝翅膀收禮截圖";
-                    alert(`回報成功！已寫入紀錄。`);
-                });
-            };
-            reader.readAsDataURL(file);
-        };
 
+    sendRecord(subType, "已提交").then(() => {
+
+        saveToLocalHistory(logTypeName, false);
+
+        document.getElementById(inputId).value = "";
+
+        document.getElementById('wingFileName').innerText =
+        "點擊選取或拍攝翅膀收禮截圖";
+
+        alert("回報成功！");
+    });
+};
         window.sendRecord = (type, detail, customTimeStr = null) => {
             const targetTimeStr = customTimeStr ? customTimeStr : new Date().toLocaleString('zh-TW', {hour12:false});
             return db.ref('attendance_records').push({

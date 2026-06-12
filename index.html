@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>金好家族管理系統</title>
-    <!-- Firebase & Excel 套件 -->
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -34,12 +33,14 @@
         .disabled-btn { background-color: #d1d5db !important; cursor: not-allowed !important; color: #9ca3af !important; }
         body { -webkit-tap-highlight-color: transparent; }
         .loading-text { color: #9ca3af; font-size: 13px; text-align: center; padding: 30px 0; font-weight: bold; width: 100%; }
+        #loadMoreAdminBtn { display: block; width: 100%; padding: 12px; background-color: #ef4444; color: white; font-weight: bold; border-radius: 12px; text-align: center; margin-top: 15px; cursor: pointer; transition: background 0.2s; }
+        #loadMoreAdminBtn:hover { background-color: #dc2626; }
+        #loadMoreAdminBtn:disabled { background-color: #e5e7eb; color: #9ca3af; cursor: not-allowed; }
     </style>
 </head>
 <body class="bg-gray-100 antialiased">
     <div id="app" class="max-w-4xl mx-auto px-4 py-6">
         
-        <!-- 登入頁面 -->
         <div id="authPage" class="max-w-md mx-auto bg-white p-8 rounded-3xl shadow-xl mt-10 text-center">
             <h2 class="text-2xl font-bold mb-6 text-blue-600">金好家族系統</h2>
             <div id="loginForm" class="space-y-4 text-left">
@@ -58,14 +59,12 @@
             </div>
         </div>
 
-        <!-- 主頁面 -->
         <div id="mainPage" class="hidden">
             <div class="flex justify-between items-center mb-4 px-2">
                 <h1 class="text-xl font-bold text-blue-600">Hi, <span id="userHello"></span></h1>
                 <button onclick="location.reload()" class="text-xs bg-gray-200 px-3 py-1 rounded text-gray-500">登出</button>
             </div>
 
-            <!-- 動態導覽列 -->
             <nav id="mainNav" class="grid grid-cols-3 sm:grid-cols-6 bg-white rounded-2xl shadow-sm mb-4 p-1 border text-xs gap-1 text-center">
                 <button class="py-3 rounded-xl font-bold nav-btn active" data-target="schedule">預約排班</button>
                 <button class="py-3 rounded-xl font-bold nav-btn" data-target="checkin">日常打卡</button>
@@ -75,7 +74,6 @@
                 <button class="py-3 rounded-xl font-bold nav-btn" data-target="profile">個人中心</button>
             </nav>
 
-            <!-- 預約排班區塊 -->
             <section id="schedule" class="tab-content active bg-white p-6 rounded-2xl border">
                 <h3 class="font-bold mb-2 text-sm text-gray-700">1. 選擇預約日期 (僅限3天內)</h3>
                 <input type="date" id="dateInput" class="w-full p-4 border rounded-xl mb-4 bg-gray-50 text-sm font-bold" onchange="updateTimeOptions()">
@@ -87,7 +85,6 @@
                 <div id="myTodayScheduleList" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto scroll-container"><div class="loading-text"><i class="fa fa-spinner fa-spin"></i> 排班資料加載中...</div></div>
             </section>
 
-            <!-- 日常打卡區 -->
             <section id="checkin" class="tab-content bg-white p-6 rounded-2xl border text-center max-w-xl mx-auto">
                 <div id="timeStatus" class="mb-4 p-3 rounded-xl text-xs font-bold bg-blue-50 text-blue-600">📌 提示：同一個小時內的上下班卡各自限提交 1 次。</div>
                 <div class="mb-4 text-left">
@@ -123,7 +120,6 @@
                 </div>
             </section>
 
-            <!-- 翅膀回報專頁 -->
             <section id="wingTab" class="tab-content bg-white p-6 rounded-2xl border max-w-xl mx-auto">
                 <h3 class="font-bold text-blue-600 mb-4 text-base border-b pb-2"><i class="fa fa-paper-plane"></i> 主播翅膀禮物回報專區</h3>
                 <div class="space-y-4 text-sm">
@@ -147,7 +143,6 @@
                 </div>
             </section>
 
-            <!-- 周任回報專頁 -->
             <section id="weekTab" class="tab-content bg-white p-6 rounded-2xl border max-w-xl mx-auto">
                 <h3 class="font-bold text-green-600 mb-4 text-base border-b pb-2"><i class="fa fa-tasks"></i> 主播每周任務回報專區</h3>
                 <div class="space-y-4 text-sm">
@@ -169,19 +164,18 @@
                 </div>
             </section>
 
-            <!-- 個人歷程區 -->
             <section id="history" class="tab-content bg-white p-4 rounded-2xl border min-h-[300px]">
                 <p class="text-gray-400 text-xs mb-2 px-1">💡 系統提示：僅顯示您個人的最新 30 筆歷史回報動態</p>
                 <div id="personalList" class="grid grid-cols-1 sm:grid-cols-2 gap-4 scroll-container"><div class="loading-text col-span-full"><i class="fa fa-spinner fa-spin"></i> 正在加載您的個人歷程紀錄...</div></div>
+                <h3 class="font-bold text-gray-700 text-sm mt-6 mb-2 border-t pt-4 px-1"><i class="fa fa-mobile text-blue-500"></i> 本地留存紀錄 (僅存於此裝置，供主播自主核對)</h3>
+                <div id="localLogsList" class="space-y-2 max-h-48 overflow-y-auto p-1 scroll-container text-xs text-gray-500"></div>
             </section>
 
-            <!-- 修改暱稱區 -->
             <section id="profile" class="tab-content bg-white p-6 rounded-2xl border text-center max-w-md mx-auto">
                 <input id="newNick" type="text" class="w-full p-4 border rounded-xl mb-4 text-sm" placeholder="輸入新暱稱">
                 <button onclick="doUpdateName()" class="w-full bg-black text-white py-4 rounded-xl font-bold">儲存修改</button>
             </section>
 
-            <!-- 管理員獨立切換選單 -->
             <section id="admin" class="tab-content bg-white p-6 rounded-2xl border-2 border-red-500 shadow-xl">
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="font-bold text-red-600 text-lg">家族管理後台</h3>
@@ -194,7 +188,6 @@
                 </button>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <!-- 左側邊欄：審核專區 -->
                     <div class="md:col-span-1 space-y-6">
                         <div>
                             <h4 class="font-bold text-sm mb-2 text-green-600"><i class="fa fa-tasks"></i> 待審核周任申請</h4>
@@ -214,13 +207,12 @@
                         </div>
                     </div>
                     
-                    <!-- 右側大區塊：全體流水帳 -->
                     <div class="md:col-span-2">
                         <div class="bg-gray-50 p-4 rounded-2xl border border-gray-200 mb-4 space-y-3">
                             <span class="text-xs font-bold text-gray-600 block"><i class="fa fa-search"></i> 後台數據實時搜尋與高效過濾面板</span>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                <input type="text" id="adminSearchKeyword" placeholder="搜尋成員暱稱或帳號..." class="p-2 border rounded-xl text-xs outline-none bg-white" oninput="renderAdminLists()">
-                                <input type="date" id="adminSearchDate" class="p-2 border rounded-xl text-xs outline-none bg-white" onchange="renderAdminLists()">
+                                <input type="text" id="adminSearchKeyword" placeholder="搜尋成員暱稱..." class="p-2 border rounded-xl text-xs outline-none bg-white" oninput="resetAdminPagination()">
+                                <input type="date" id="adminSearchDate" class="p-2 border rounded-xl text-xs outline-none bg-white" onchange="resetAdminPagination()">
                             </div>
                             <div class="flex justify-between items-center text-[11px] text-gray-400">
                                 <span>💡 提示：留空代表看全家族完整歷程紀錄</span>
@@ -230,9 +222,14 @@
 
                         <div class="flex justify-between items-center mb-2 px-1">
                             <h4 class="font-bold text-sm text-red-600"><i class="fa fa-exclamation-triangle"></i> 全體動態流水帳</h4>
-                            <span class="text-xs text-gray-500">當前載入: <span id="adminMatchCount" class="font-bold text-red-500">0</span> 筆</span>
+                            <span class="text-xs text-gray-500">符合條件總計: <span id="adminMatchCount" class="font-bold text-red-500">0</span> 筆</span>
                         </div>
-                        <div id="adminAllList" class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[600px] overflow-y-auto p-1 scroll-container"><div class="loading-text col-span-full"><i class="fa fa-spinner fa-spin"></i> 正在異步同步完整雲端數據流...</div></div>
+                        
+                        <div id="adminAllList" class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-1">
+                            <div class="loading-text col-span-full"><i class="fa fa-spinner fa-spin"></i> 正在異步同步完整雲端數據流...</div>
+                        </div>
+                        
+                        <button id="loadMoreAdminBtn" onclick="loadMoreAdminData()">載入後續 20 筆數據</button>
                     </div>
                 </div>
             </section>
@@ -251,6 +248,9 @@
         const db = firebase.database();
         let curUser = null;
         let globalRecordsForOptions = [];
+        
+        // 分頁控管用變數
+        let adminCurrentLimit = 20;
 
         function initDateRange() {
             const today = new Date();
@@ -335,6 +335,7 @@
             }
             initDateRange();
             bindLogsRealtimeListener(); 
+            renderLocalLogsView();
             checkTime();
             setInterval(checkTime, 5000);
         }
@@ -343,6 +344,27 @@
             const file = document.getElementById(inputId).files[0];
             if(file) document.getElementById(displayId).innerText = "已選取：" + file.name;
         };
+
+        // 核心修改：寫入個人本地留存快取
+        function saveToLocalHistory(type, isImg = false) {
+            try {
+                const logs = JSON.parse(localStorage.getItem('jinho_local_logs')) || [];
+                logs.unshift({
+                    time: new Date().toLocaleString('zh-TW', {hour12:false}),
+                    type: type,
+                    status: isImg ? "圖片已同步至雲端庫並儲存在本機" : "文字數據已送審/寫入"
+                });
+                localStorage.setItem('jinho_local_logs', JSON.stringify(logs.slice(0, 50))); // 最多留50條
+                renderLocalLogsView();
+            } catch(e) { console.error(e); }
+        }
+
+        function renderLocalLogsView() {
+            const container = document.getElementById('localLogsList');
+            if(!container) return;
+            const logs = JSON.parse(localStorage.getItem('jinho_local_logs')) || [];
+            container.innerHTML = logs.map(l => `<div class="p-2 bg-gray-50 border rounded-lg"><b>[${l.time}]</b> ${l.type} - <span class="text-green-600">${l.status}</span></div>`).join('') || "<p class='text-gray-400 text-center py-2'>本機尚無提交留存紀錄</p>";
+        }
 
         window.handleDailyCheckin = (checkinType) => {
             const file = document.getElementById('imgInput').files[0];
@@ -367,6 +389,7 @@
             const reader = new FileReader();
             reader.onload = (e) => {
                 sendRecord(checkinType, e.target.result).then(() => {
+                    saveToLocalHistory(checkinType, true); // 寫入本機裝置留存
                     document.getElementById('imgInput').value = "";
                     document.getElementById('fileNameDisplay').innerText = "點擊選取、拖曳或拍攝日常打卡截圖";
                     alert(`🎉 ${checkinType}成功！`);
@@ -375,16 +398,18 @@
             reader.readAsDataURL(file);
         };
 
-        window.handleImageCheckinGeneric = (subType, inputId) => {
+        window.handleImageCheckinGeneric = (subType, inputId, logTypeName) => {
             const file = document.getElementById(inputId).files[0];
             if(!file) return alert('請先選取並上傳截圖照片！');
             
             const reader = new FileReader();
             reader.onload = (e) => {
-                sendRecord(subType, e.target.result);
-                document.getElementById(inputId).value = "";
-                document.getElementById('wingFileName').innerText = "點擊選取或拍攝翅膀收禮截圖";
-                alert(`回報成功！已寫入紀錄。`);
+                sendRecord(subType, e.target.result).then(() => {
+                    saveToLocalHistory(logTypeName, true); // 寫入本機裝置留存
+                    document.getElementById(inputId).value = "";
+                    document.getElementById('wingFileName').innerText = "點擊選取或拍攝翅膀收禮截圖";
+                    alert(`回報成功！已寫入紀錄。`);
+                });
             };
             reader.readAsDataURL(file);
         };
@@ -401,7 +426,7 @@
         window.submitWingReport = () => {
             const wType = document.querySelector('input[name="wingType"]:checked').value;
             const detailText = `【翅膀回報】禮物級別：${wType}`;
-            handleImageCheckinGeneric(detailText, 'wingImgInput');
+            handleImageCheckinGeneric(detailText, 'wingImgInput', `翅膀回報(${wType})`);
         };
 
         // 周任務回報送審機制
@@ -414,6 +439,7 @@
                 weekType: weekType, weekMethod: weekMethod,
                 timestamp: Date.now()
             }).then(() => {
+                saveToLocalHistory(`週任務送審(${weekType})`, false);
                 alert('🎉 周任務回報已提交！請等待廳長後台審核核准。');
             });
         };
@@ -465,6 +491,7 @@
                 repairDate: rDate, repairHour: rHour, type: rType,
                 timestamp: Date.now()
             }).then(() => {
+                saveToLocalHistory(`申請補卡(${rType})`, false);
                 alert('補打卡申請已送出！請等待廳長後台審核。');
                 document.getElementById('repairDate').value = "";
             });
@@ -600,7 +627,10 @@
             });
 
             if(isDuplicated) alert(`🚨 提示：您已經登記過此時段了！`);
-            else sendRecord('預約排班', targetDetail).then(() => alert('成功送出！'));
+            else sendRecord('預約排班', targetDetail).then(() => {
+                saveToLocalHistory(`預約排班(${targetDetail})`, false);
+                alert('成功送出！');
+            });
         };
 
         window.cancelSchedule = (key) => {
@@ -620,6 +650,18 @@
         window.clearAdminFilters = () => {
             document.getElementById('adminSearchKeyword').value = "";
             document.getElementById('adminSearchDate').value = "";
+            resetAdminPagination();
+        };
+
+        // 搜尋或日期變更時，重置資料分頁行數
+        window.resetAdminPagination = () => {
+            adminCurrentLimit = 20;
+            renderAdminLists();
+        };
+
+        // 按鈕觸發載入後續 20 筆
+        window.loadMoreAdminData = () => {
+            adminCurrentLimit += 20;
             renderAdminLists();
         };
 
@@ -636,19 +678,26 @@
             });
         }
 
+        // 核心修改：效能優化與最高管理權限分流渲染邏輯
         function renderAdminLists() {
             if (!curUser) return;
             const keyword = document.getElementById('adminSearchKeyword') ? document.getElementById('adminSearchKeyword').value.trim().toLowerCase() : "";
             const searchDate = document.getElementById('adminSearchDate') ? document.getElementById('adminSearchDate').value : "";
 
             let p = ""; let a = ""; 
-            let personalCount = 0; let adminMatchCount = 0;
-            const list = [...globalRecordsForOptions];
+            let personalCount = 0; 
+            let adminMatchCount = 0; // 符合過濾條件的總資料筆數
+            let renderedCount = 0;   // 實際被畫到螢幕上的筆數（用來控管 20 筆上限）
             
-            list.reverse().forEach(r => {
+            const list = [...globalRecordsForOptions];
+            const reversedList = list.reverse();
+
+            reversedList.forEach(r => {
                 const isImg = r.detail && r.detail.startsWith('data:image');
                 const cleanShowDetail = (r.type === '預約排班') ? r.detail.split('(')[0].trim() : r.detail;
-                let display = isImg ? `<img src="${r.detail}" class="record-img mx-auto" loading="lazy" decoding="async" onclick="window.open(this.src)">` : `<div class="bg-gray-50 p-2 rounded text-gray-500 font-bold">${cleanShowDetail}</div>`;
+                
+                // --- 1. 個人歷程區的圖片顯示邏輯 (維持原樣) ---
+                let personalDisplay = isImg ? `<img src="${r.detail}" class="record-img mx-auto" loading="lazy" decoding="async" onclick="window.open(this.src)">` : `<div class="bg-gray-50 p-2 rounded text-gray-500 font-bold">${cleanShowDetail}</div>`;
                 
                 let typeTagClass = "text-gray-400";
                 if (r.type.includes("上班")) typeTagClass = "text-green-600 font-extrabold";
@@ -657,15 +706,16 @@
                 if (r.type.includes("翅膀")) typeTagClass = "text-purple-600 font-bold";
                 if (r.type.includes("周任")) typeTagClass = "text-indigo-600 font-bold";
 
-                const card = `<div class="p-4 bg-white rounded-2xl shadow-sm mb-1 border border-gray-100 text-[11px]">
+                const personalCard = `<div class="p-4 bg-white rounded-2xl shadow-sm mb-1 border border-gray-100 text-[11px]">
                     <div class="flex justify-between items-center mb-1"><span class="font-bold text-blue-600">${r.nick}</span><span class="text-gray-300 font-normal">${r.time}</span></div>
-                    <div class="${typeTagClass} mb-2 font-bold">${r.type}</div>${display}
+                    <div class="${typeTagClass} mb-2 font-bold">${r.type}</div>${personalDisplay}
                 </div>`;
                 
                 if(r.user === curUser.acc) {
-                    if (personalCount < 30) { p += card; personalCount++; }
+                    if (personalCount < 30) { p += personalCard; personalCount++; }
                 }
 
+                // --- 2. 管理後台篩選與分流優化邏輯 ---
                 let isMatch = true;
                 if (keyword) {
                     const nickMatch = r.nick && r.nick.toLowerCase().includes(keyword);
@@ -679,25 +729,60 @@
                 }
 
                 if (isMatch) {
-                    adminMatchCount++;
-                    const adminCard = `<div class="p-4 bg-white rounded-2xl shadow-sm border border-gray-100 text-[11px]">
-                        <div class="flex justify-between items-center mb-1">
-                            <span class="font-bold text-gray-700">${r.nick} (${r.user})</span>
-                            <span class="text-gray-300 font-normal">${r.time}</span>
-                        </div>
-                        <div class="flex justify-between items-center mt-1">
-                            <span class="${typeTagClass}">${r.type}</span>
-                            <button onclick="adminDeleteRecord('${r.key}', '${r.nick}')" class="text-[10px] bg-red-50 text-red-600 border border-red-200 px-2 py-0.5 rounded font-bold hover:bg-red-100 transition">刪除</button>
-                        </div>
-                        <div class="mt-2">${display}</div>
-                    </div>`;
-                    a += adminCard;
+                    adminMatchCount++; // 統計符合條件的總筆數
+
+                    // 只有在當前分頁限制額度內 (例如前 20 筆)，才真正拼接 HTML 渲染出來
+                    if (renderedCount < adminCurrentLimit) {
+                        
+                        // 核心需求：最高管理權限隱藏普通打卡回傳圖，只看翅膀圖片
+                        let adminDisplay = "";
+                        if (isImg) {
+                            // 如果是翅膀回報，強制顯示圖片，並使用 loading="lazy" 防卡頓
+                            if (r.type.includes("翅膀")) {
+                                adminDisplay = `<img src="${r.detail}" class="record-img mx-auto" loading="lazy" decoding="async" onclick="window.open(this.src)">`;
+                            } else {
+                                // 如果是上班或下班打卡，隱藏圖片，改顯示純文字提示
+                                adminDisplay = `<div class="bg-gray-100 p-3 rounded-xl text-gray-400 font-medium text-center"><i class="fa fa-eye-slash"></i> 系統已隱藏日常打卡圖（文字記錄正常留存）</div>`;
+                            }
+                        } else {
+                            adminDisplay = `<div class="bg-gray-50 p-2 rounded text-gray-500 font-bold">${cleanShowDetail}</div>`;
+                        }
+
+                        const adminCard = `<div class="p-4 bg-white rounded-2xl shadow-sm border border-gray-100 text-[11px]">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="font-bold text-gray-700">${r.nick} (${r.user})</span>
+                                <span class="text-gray-300 font-normal">${r.time}</span>
+                            </div>
+                            <div class="flex justify-between items-center mt-1">
+                                <span class="${typeTagClass}">${r.type}</span>
+                                <button onclick="adminDeleteRecord('${r.key}', '${r.nick}')" class="text-[10px] bg-red-50 text-red-600 border border-red-200 px-2 py-0.5 rounded font-bold hover:bg-red-100 transition">刪除</button>
+                            </div>
+                            <div class="mt-2">${adminDisplay}</div>
+                        </div>`;
+                        
+                        a += adminCard;
+                        renderedCount++;
+                    }
                 }
             });
 
             if(document.getElementById('personalList')) document.getElementById('personalList').innerHTML = p || "<p class='col-span-full text-center text-gray-400 py-4'>目前無紀錄</p>";
             if(document.getElementById('adminAllList')) document.getElementById('adminAllList').innerHTML = a || "<p class='col-span-full text-center text-gray-400 py-4'>找不到符合篩選條件的數據</p>";
             if(document.getElementById('adminMatchCount')) document.getElementById('adminMatchCount').innerText = adminMatchCount;
+
+            // 控制「載入更多」按鈕的狀態
+            const loadMoreBtn = document.getElementById('loadMoreAdminBtn');
+            if (loadMoreBtn) {
+                if (adminMatchCount <= adminCurrentLimit) {
+                    loadMoreBtn.innerText = "已加載全體完畢";
+                    loadMoreBtn.disabled = true;
+                    loadMoreBtn.classList.add('disabled-btn');
+                } else {
+                    loadMoreBtn.innerText = `載入後續 20 筆數據 (目前已看 ${renderedCount}/${adminMatchCount})`;
+                    loadMoreBtn.disabled = false;
+                    loadMoreBtn.classList.remove('disabled-btn');
+                }
+            }
         }
 
         window.exportToExcel = () => {

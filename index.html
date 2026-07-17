@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>金好家族管理系統</title>
+    <title>金好家族管理系統 - 雙廳分流升級版</title>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -62,7 +62,7 @@
         <div id="mainPage" class="hidden">
             <div class="flex justify-between items-center mb-4 px-2">
                 <h1 class="text-xl font-bold text-blue-600">Hi, <span id="userHello"></span></h1>
-                <button onclick="location.reload()" class="text-xs bg-gray-200 px-3 py-1 rounded text-gray-500">登出</button>
+                <button onclick="logout()" class="text-xs bg-gray-200 px-3 py-1 rounded text-gray-500 hover:bg-gray-300 transition">登出</button>
             </div>
 
             <nav id="mainNav" class="grid grid-cols-3 sm:grid-cols-6 bg-white rounded-2xl shadow-sm mb-4 p-1 border text-xs gap-1 text-center">
@@ -77,10 +77,10 @@
             <section id="schedule" class="tab-content active bg-white p-6 rounded-2xl border">
                 <h3 class="font-bold mb-2 text-sm text-gray-700">1. 選擇預約日期 (僅限3天內)</h3>
                 <input type="date" id="dateInput" class="w-full p-4 border rounded-xl mb-4 bg-gray-50 text-sm font-bold" onchange="updateTimeOptions()">
-                <h3 class="font-bold mb-2 text-sm text-gray-700">2. 選擇排班時段 (每時段限4人)</h3>
+                <h3 class="font-bold mb-2 text-sm text-gray-700">2. 選擇排班時段 <span id="scheduleLimitHint">(各廳獨立限4人)</span></h3>
                 <select id="timeInput" class="w-full p-4 border rounded-xl mb-4 bg-gray-50 text-sm font-bold"></select>
                 <button onclick="submitSchedule()" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold shadow-md active:scale-95 transition mb-6">送出預約排班</button>
-                <h4 class="font-bold text-xs text-blue-600 mb-2"><i class="fa fa-calendar-check-o"></i> 您當天已預約的時段：</h4>
+                <h4 class="font-bold text-xs text-blue-600 mb-2"><i class="fa fa-calendar-check-o"></i> 系統排班紀錄：</h4>
                 <div id="myTodayScheduleList" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto scroll-container"><div class="loading-text"><i class="fa fa-spinner fa-spin"></i> 排班資料加載中...</div></div>
             </section>
 
@@ -123,15 +123,22 @@
                 <h3 class="font-bold text-blue-600 mb-4 text-base border-b pb-2"><i class="fa fa-paper-plane"></i> 主播翅膀禮物回報專區</h3>
                 <div class="space-y-4 text-sm">
                     <div>
-                        <span class="block font-bold text-gray-700 mb-2">1. 請選擇翅膀種類：</span>
+                        <span class="block font-bold text-gray-700 mb-2">1. 請選擇分類期間：</span>
                         <div class="flex gap-4 bg-gray-50 p-3 rounded-xl border font-bold">
+                            <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="wingPeriod" value="一般期間" checked> 一般期間</label>
+                            <label class="flex items-center gap-1 cursor-pointer text-red-600"><input type="radio" name="wingPeriod" value="廳戰期間"> 🔥 廳戰期間</label>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="block font-bold text-gray-700 mb-2">2. 請選擇翅膀種類：</span>
+                        <div class="flex flex-wrap gap-4 bg-gray-50 p-3 rounded-xl border font-bold">
                             <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="wingType" value="紅羽" checked> 紅羽</label>
                             <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="wingType" value="粉羽"> 粉羽</label>
                             <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="wingType" value="璀璨"> 璀璨</label>
                         </div>
                     </div>
                     <div>
-                        <span class="block font-bold text-gray-700 mb-2">2. 上傳收禮截圖證明：</span>
+                        <span class="block font-bold text-gray-700 mb-2">3. 上傳收禮截圖證明：</span>
                         <label class="block w-full border-2 border-dashed border-gray-300 rounded-2xl p-6 cursor-pointer hover:bg-gray-50 transition text-center bg-gray-50">
                             <i class="fa fa-image text-3xl text-gray-300 mb-2"></i>
                             <span id="wingFileName" class="block text-xs text-gray-500">點擊選取或拍攝翅膀收禮截圖</span>
@@ -146,14 +153,21 @@
                 <h3 class="font-bold text-green-600 mb-4 text-base border-b pb-2"><i class="fa fa-tasks"></i> 主播每周任務回報專區</h3>
                 <div class="space-y-4 text-sm">
                     <div>
-                        <span class="block font-bold text-gray-700 mb-2">1. 請選擇周任務級別：</span>
+                        <span class="block font-bold text-gray-700 mb-2">1. 請選擇分類期間：</span>
+                        <div class="flex gap-4 bg-gray-50 p-3 rounded-xl border font-bold">
+                            <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="weekPeriod" value="一般期間" checked> 一般期間</label>
+                            <label class="flex items-center gap-1 cursor-pointer text-red-600"><input type="radio" name="weekPeriod" value="廳戰期間"> ⚔️ 廳戰期間</label>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="block font-bold text-gray-700 mb-2">2. 請選擇周任務級別：</span>
                         <div class="flex gap-4 bg-gray-50 p-3 rounded-xl border font-bold">
                             <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="weekType" value="初階" checked> 初階任務</label>
                             <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="weekType" value="高階"> 高階任務</label>
                         </div>
                     </div>
                     <div>
-                        <span class="block font-bold text-gray-700 mb-2">2. 請選擇完成方式：</span>
+                        <span class="block font-bold text-gray-700 mb-2">3. 請選擇完成方式：</span>
                         <div class="flex gap-4 bg-gray-50 p-3 rounded-xl border font-bold">
                             <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="weekMethod" value="累積完成" checked> 累積完成</label>
                             <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="weekMethod" value="一次完成"> 一次完成</label>
@@ -171,20 +185,32 @@
             </section>
 
             <section id="profile" class="tab-content bg-white p-6 rounded-2xl border text-center max-w-md mx-auto">
-                <input id="newNick" type="text" class="w-full p-4 border rounded-xl mb-4 text-sm" placeholder="輸入新暱稱">
-                <button onclick="doUpdateName()" class="w-full bg-black text-white py-4 rounded-xl font-bold">儲存修改</button>
+                <div class="text-left space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 mb-1">隸屬廳別（如需更改請洽管理員）</label>
+                        <input id="myHallDisplay" type="text" class="w-full p-4 border rounded-xl text-sm bg-gray-100 text-gray-600 font-bold" readonly>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 mb-1">主播自定義顯示暱稱</label>
+                        <input id="newNick" type="text" class="w-full p-4 border rounded-xl text-sm" placeholder="輸入新暱稱">
+                    </div>
+                    <button onclick="doUpdateName()" class="w-full bg-black text-white py-4 rounded-xl font-bold active:scale-95 transition">儲存修改</button>
+                </div>
             </section>
 
             <section id="admin" class="tab-content bg-white p-6 rounded-2xl border-2 border-red-500 shadow-xl">
                 <div class="flex justify-between items-center mb-6">
-                    <h3 class="font-bold text-red-600 text-lg">家族管理後台</h3>
-                    <span class="text-xs bg-red-100 text-red-600 px-2 py-1 rounded font-bold">最高權限已載入</span>
+                    <h3 class="font-bold text-red-600 text-lg" id="adminPanelTitle">家族管理後台</h3>
+                    <span class="text-xs bg-red-100 text-red-600 px-2 py-1 rounded font-bold" id="adminBadge">權限已載入</span>
                 </div>
                 
-                <h4 class="font-bold text-sm mb-3 text-gray-600">數據報表匯出</h4>
-                <button onclick="exportToExcel()" class="max-w-md bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-2xl shadow-lg mb-6 flex justify-center items-center gap-2 active:scale-95 transition">
-                    <i class="fa fa-file-excel-o"></i> 導出 45 定考勤整合報表
-                </button>
+                <!-- 報表導出區塊：只有最高管理員看的到 -->
+                <div id="adminExportContainer" class="hidden">
+                    <h4 class="font-bold text-sm mb-3 text-gray-600">數據報表匯出</h4>
+                    <button onclick="exportToExcel()" class="max-w-md bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-2xl shadow-lg mb-6 flex justify-center items-center gap-2 active:scale-95 transition">
+                        <i class="fa fa-file-excel-o"></i> 導出 45 定考勤整合報表
+                    </button>
+                </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div class="md:col-span-1 space-y-6">
@@ -210,7 +236,7 @@
                         <div class="bg-gray-50 p-4 rounded-2xl border border-gray-200 mb-4 space-y-3">
                             <span class="text-xs font-bold text-gray-600 block"><i class="fa fa-search"></i> 後台數據實時搜尋與高效過濾面板</span>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                <input type="text" id="adminSearchKeyword" placeholder="搜尋成員暱稱..." class="p-2 border rounded-xl text-xs outline-none bg-white" oninput="resetAdminPagination()">
+                                <input type="text" id="adminSearchKeyword" placeholder="搜尋成員暱稱、廳別或[廳戰]..." class="p-2 border rounded-xl text-xs outline-none bg-white" oninput="resetAdminPagination()">
                                 <input type="date" id="adminSearchDate" class="p-2 border rounded-xl text-xs outline-none bg-white" onchange="resetAdminPagination()">
                             </div>
                             <div class="flex justify-between items-center text-[11px] text-gray-400">
@@ -236,53 +262,39 @@
     </div>
 
     <script>
-        // 核心安全修改：從外部獨立環境配置檔案讀取金鑰，徹底防止 GitHub 安全機制封鎖
         let db = null;
         let curUser = null;
         let globalRecordsForOptions = [];
         let adminCurrentLimit = 20;
 
-      // Import the functions you need from the SDKs you need
-const firebaseConfig = {
-  apiKey: "AIzaSyB7e1itC17IxcSpNN1eBnLuTI43uHZ-fYQ",
-  authDomain: "yuesheng-system.firebaseapp.com",
-  databaseURL: "https://yuesheng-system-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "yuesheng-system",
-  storageBucket: "yuesheng-system.firebasestorage.app",
-  messagingSenderId: "975395892406",
-  appId: "1:975395892406:web:97dabd72e189c4e79aca17"
-};
+        // Firebase Config[span_0](start_span)[span_0](end_span)
+        const firebaseConfig = {
+          apiKey: "AIzaSyB7e1itC17IxcSpNN1eBnLuTI43uHZ-fYQ",
+          authDomain: "yuesheng-system.firebaseapp.com",
+          databaseURL: "https://yuesheng-system-default-rtdb.asia-southeast1.firebasedatabase.app",
+          projectId: "yuesheng-system",
+          storageBucket: "yuesheng-system.firebasestorage.app",
+          messagingSenderId: "975395892406",
+          appId: "1:975395892406:web:97dabd72e189c4e79aca17"
+        };
 
-firebase.initializeApp(firebaseConfig);
-db = firebase.database();
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.database();
+        console.log("Firebase連線成功");
 
-console.log("Firebase連線成功");
         const CLOUD_NAME = "dxfnvpflp";
-const UPLOAD_PRESET = "jinhao_upload";
+        const UPLOAD_PRESET = "jinhao_upload";
 
-async function uploadToCloudinary(file) {
-
-    const formData = new FormData();
-
-    formData.append("file", file);
-    formData.append("upload_preset", UPLOAD_PRESET);
-
-    const res = await fetch(
-        `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
-        {
-            method: "POST",
-            body: formData
+        async function uploadToCloudinary(file) {
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("upload_preset", UPLOAD_PRESET);
+            const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, { method: "POST", body: formData });
+            const data = await res.json();
+            if (!data.secure_url) throw new Error("Cloudinary上傳失敗");
+            return data.secure_url;
         }
-    );
 
-    const data = await res.json();
-
-    if (!data.secure_url) {
-        throw new Error("Cloudinary上傳失敗");
-    }
-
-    return data.secure_url;
-}
         function initDateRange() {
             const today = new Date();
             const day3 = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
@@ -334,12 +346,20 @@ async function uploadToCloudinary(file) {
             if(!acc || !pwd) return alert('請填寫帳號與密碼');
             
             if(acc === 'admin' && pwd === '123') {
-                loginOk({ acc:'admin', nick:'岳笙', role:'admin' });
+                loginOk({ acc:'admin', nick:'最高管理員', role:'admin', hall:'全部' });
             } else {
                 db.ref('users/'+acc).once('value', snap => {
                     const d = snap.val();
-                    if(d && d.pwd === pwd) loginOk({...d, role:'user'});
-                    else alert('帳密錯誤或管理員未核准您的註冊申請');
+                    if(d && d.pwd === pwd) {
+                        loginOk({
+                            acc: d.acc,
+                            nick: d.nick,
+                            role: d.role || 'user',
+                            hall: d.hall || '金好野'
+                        });
+                    } else {
+                        alert('帳密錯誤或管理員未核准您的註冊申請');
+                    }
                 });
             }
         };
@@ -350,19 +370,39 @@ async function uploadToCloudinary(file) {
             const nick = document.getElementById('regNick').value.trim();
             const pwd = document.getElementById('regPwd').value.trim();
             if(!acc || !nick || !pwd) return alert('請填寫完整註冊資料');
-            db.ref('pending_users/'+acc).set({ acc, nick, pwd, timestamp: Date.now() }).then(() => { alert('已提交！請聯絡岳笙審核。'); toggleAuth(false); });
+            db.ref('pending_users/'+acc).set({ acc, nick, pwd, hall: '金好野', role: 'user', timestamp: Date.now() }).then(() => { alert('已提交！請聯絡岳笙審核。'); toggleAuth(false); });
         };
 
         function loginOk(u) {
             curUser = u;
             document.getElementById('authPage').classList.add('hidden');
             document.getElementById('mainPage').classList.remove('hidden');
-            document.getElementById('userHello').innerText = curUser.nick;
             
-            if(curUser.role === 'admin') {
+            document.getElementById('userHello').innerText = `${curUser.nick} [${curUser.hall}]`;
+            if(document.getElementById('myHallDisplay')) document.getElementById('myHallDisplay').value = curUser.hall;
+            if(document.getElementById('newNick')) document.getElementById('newNick').value = curUser.nick;
+            
+            if(document.getElementById('timeStatus')) {
+                document.getElementById('timeStatus').innerText = `📌 提示：當前已對接【${curUser.hall}】打卡系統。同小時內上下班卡各限1次。`;
+            }
+
+            if(curUser.role === 'admin' || curUser.role === 'sub_admin') {
                 const nav = document.getElementById('mainNav');
-                nav.className = "grid grid-cols-3 sm:grid-cols-7 bg-white rounded-2xl shadow-sm mb-4 p-1 border text-xs gap-1 text-center";
-                nav.innerHTML += `<button class="py-3 rounded-xl font-bold nav-btn border border-red-100 text-red-600" data-target="admin"><i class="fa fa-cog"></i> 最高管理</button>`;
+                if(!document.getElementById('adminNavBtn')) {
+                    nav.className = "grid grid-cols-3 sm:grid-cols-7 bg-white rounded-2xl shadow-sm mb-4 p-1 border text-xs gap-1 text-center";
+                    nav.innerHTML += `<button id="adminNavBtn" class="py-3 rounded-xl font-bold nav-btn border border-red-100 text-red-600" data-target="admin"><i class="fa fa-cog"></i> 後台管理</button>`;
+                }
+                
+                document.getElementById('adminPanelTitle').innerText = curUser.role === 'admin' ? "最高家族管理後台 (總部)" : `家族廳務後台 (${curUser.hall})`;
+                document.getElementById('adminBadge').innerText = curUser.role === 'admin' ? "最高權限已載入" : "廳長權限已載入";
+                
+                // 【權限收緊】只有最高管理員 admin 才能看到並使用導出報表功能
+                if (curUser.role === 'admin') {
+                    document.getElementById('adminExportContainer').classList.remove('hidden');
+                } else {
+                    document.getElementById('adminExportContainer').classList.add('hidden');
+                }
+                
                 bindNavEvents(); 
                 loadAdminData(); loadUserList(); loadRepairRequests(); loadWeekRequests();
             }
@@ -372,6 +412,21 @@ async function uploadToCloudinary(file) {
             checkTime();
             setInterval(checkTime, 5000);
         }
+
+        window.logout = () => {
+            curUser = null;
+            document.getElementById('loginAcc').value = "";
+            document.getElementById('loginPwd').value = "";
+            document.getElementById('mainPage').classList.add('hidden');
+            document.getElementById('authPage').classList.remove('hidden');
+            
+            const nav = document.getElementById('mainNav');
+            nav.className = "grid grid-cols-3 sm:grid-cols-6 bg-white rounded-2xl shadow-sm mb-4 p-1 border text-xs gap-1 text-center";
+            const adminBtn = document.getElementById('adminNavBtn');
+            if(adminBtn) adminBtn.remove();
+            
+            alert('已成功登出系統');
+        };
 
         window.previewImage = (inputId, displayId) => {
             const file = document.getElementById(inputId).files[0];
@@ -399,69 +454,74 @@ async function uploadToCloudinary(file) {
         }
 
         window.handleDailyCheckin = async (checkinType) => {
-    const file = document.getElementById("imgInput").files[0];
-    if(!file) return alert("請先選取打卡圖片");
+            const file = document.getElementById("imgInput").files[0];
+            if(!file) return alert("請先選取打卡圖片");
 
-    try{
-        const imageUrl = await uploadToCloudinary(file);
-        await sendRecord(checkinType, imageUrl);
-        saveToLocalHistory(checkinType, true);
+            const container = document.getElementById('checkinBtnContainer');
+            container.innerHTML = `<button class="w-full disabled-btn text-white py-4 rounded-xl font-bold shadow-md" disabled><i class="fa fa-spinner fa-spin"></i> 正在安全同步並檢測重複紀錄...</button>`;
 
-        document.getElementById("imgInput").value = "";
-        document.getElementById("fileNameDisplay").innerText =
-        "點擊選取、拖曳或拍攝日常打卡截圖";
+            try {
+                const snapshot = await db.ref('attendance_records')
+                    .orderByChild('user')
+                    .equalTo(curUser.acc)
+                    .limitToLast(5)
+                    .once('value');
+                    
+                let isTooFrequent = false;
+                snapshot.forEach(child => {
+                    const rec = child.val();
+                    if (rec.type === checkinType && (Date.now() - rec.timestamp) < 60000) {
+                        isTooFrequent = true;
+                    }
+                });
 
-        alert("🎉 打卡成功");
-    }catch(err){
-        console.error(err);
-        alert("圖片上傳失敗");
-    }
-};            
-        window.handleImageCheckinGeneric =
-async (subType,inputId,logTypeName)=>{
+                if (isTooFrequent) {
+                    alert("⚠️ 系統偵測到您在 1 分鐘內已有相同的打卡紀錄，已自動攔截重複提交！");
+                    checkTime();
+                    return;
+                }
 
-    const file =
-    document.getElementById(inputId).files[0];
+                const imageUrl = await uploadToCloudinary(file);
+                await sendRecord(checkinType, imageUrl);
+                saveToLocalHistory(checkinType, true);
 
-    if(!file){
-        return alert("請先選擇圖片");
-    }
+                document.getElementById("imgInput").value = "";
+                document.getElementById("fileNameDisplay").innerText = "點擊選取、拖曳或拍攝日常打卡截圖";
+                alert("🎉 打卡成功");
+            } catch(err) {
+                console.error(err);
+                alert("打卡失敗，請檢查網路後重試");
+            } finally {
+                checkTime();
+            }
+        };            
 
-    try{
+        window.handleImageCheckinGeneric = async (subType, inputId, logTypeName) => {
+            const file = document.getElementById(inputId).files[0];
+            if(!file) return alert("請先選擇圖片");
 
-        const imageUrl =
-        await uploadToCloudinary(file);
+            try {
+                const imageUrl = await uploadToCloudinary(file);
+                await sendRecord(subType, imageUrl);
+                saveToLocalHistory(logTypeName, true);
 
-        await sendRecord(
-            subType,
-            imageUrl
-        );
+                document.getElementById(inputId).value = "";
+                document.getElementById("wingFileName").innerText = "點擊選取或拍攝翅膀收禮截圖";
+                alert("回報成功");
+            } catch(err) {
+                console.error(err);
+                alert("圖片上傳失敗");
+            }
+        };
 
-        saveToLocalHistory(
-            logTypeName,
-            true
-        );
-
-        document.getElementById(inputId).value="";
-
-        document.getElementById("wingFileName").innerText=
-        "點擊選取或拍攝翅膀收禮截圖";
-
-        alert("回報成功");
-
-    }catch(err){
-
-        console.error(err);
-
-        alert("圖片上傳失敗");
-
-    }
-
-};
         window.sendRecord = (type, detail, customTimeStr = null) => {
             const targetTimeStr = customTimeStr ? customTimeStr : new Date().toLocaleString('zh-TW', {hour12:false});
             return db.ref('attendance_records').push({
-                user: curUser.acc, nick: curUser.nick, type, detail,
+                user: curUser.acc, 
+                nick: curUser.nick, 
+                hall: curUser.hall, 
+                type: type, 
+                detail: detail,
                 timestamp: Date.now(),
                 time: targetTimeStr
             });
@@ -469,21 +529,28 @@ async (subType,inputId,logTypeName)=>{
 
         window.submitWingReport = () => {
             const wType = document.querySelector('input[name="wingType"]:checked').value;
-            const detailText = `【翅膀回報】禮物級別：${wType}`;
-            handleImageCheckinGeneric(detailText, 'wingImgInput', `翅膀回報(${wType})`);
+            const wPeriod = document.querySelector('input[name="wingPeriod"]:checked').value;
+            
+            const detailText = `【翅膀回報】[${wPeriod}] 禮物級別：${wType}`;
+            handleImageCheckinGeneric(detailText, 'wingImgInput', `翅膀回報(${wPeriod}-${wType})`);
         };
 
         window.submitWeekReportToAdmin = () => {
             const weekType = document.querySelector('input[name="weekType"]:checked').value;
             const weekMethod = document.querySelector('input[name="weekMethod"]:checked').value;
+            const weekPeriod = document.querySelector('input[name="weekPeriod"]:checked').value;
             
             db.ref('week_requests').push({
-                user: curUser.acc, nick: curUser.nick,
-                weekType: weekType, weekMethod: weekMethod,
+                user: curUser.acc, 
+                nick: curUser.nick,
+                hall: curUser.hall,
+                weekType: weekType, 
+                weekMethod: weekMethod,
+                weekPeriod: weekPeriod,
                 timestamp: Date.now()
             }).then(() => {
-                saveToLocalHistory(`週任務送審(${weekType})`, false);
-                alert('🎉 周任務回報已提交！請等待廳長後台審核核准。');
+                saveToLocalHistory(`週任務送審(${weekPeriod}-${weekType})`, false);
+                alert(`🎉 周任務回報已提交！[${weekPeriod}] 請等待廳長後台審核核准。`);
             });
         };
 
@@ -492,9 +559,11 @@ async (subType,inputId,logTypeName)=>{
                 let h = "";
                 snap.forEach(c => {
                     const r = c.val();
+                    if(curUser.role === 'sub_admin' && r.hall !== curUser.hall) return;
+
                     h += `<div class="p-3 bg-white rounded-xl border border-green-200 text-[11px] space-y-2 shadow-sm">
-                        <div><b>${r.nick}</b> 回報周任務</div>
-                        <div class="text-gray-500">級別：<span class="text-green-600 font-bold">${r.weekType}任務</span><br>方式：${r.weekMethod}</div>
+                        <div><b>${r.nick}</b> [${r.hall || '金好野'}] 回報周任務</div>
+                        <div class="text-gray-500">期間：<span class="text-red-500 font-bold">${r.weekPeriod || '一般期間'}</span><br>級別：<span class="text-green-600 font-bold">${r.weekType}任務</span><br>方式：${r.weekMethod}</div>
                         <div class="flex gap-2 justify-end">
                             <button onclick="rejectWeek('${c.key}')" class="px-2 py-1 text-gray-400 border rounded-lg hover:bg-gray-50">拒絕</button>
                             <button onclick="approveWeek('${c.key}')" class="px-3 py-1 bg-green-500 text-white font-bold rounded-lg shadow-sm hover:bg-green-600">核准</button>
@@ -509,8 +578,13 @@ async (subType,inputId,logTypeName)=>{
             db.ref('week_requests/' + key).once('value', snap => {
                 const r = snap.val();
                 if(!r) return;
-                const detailText = `（管理員審核成功）完成進度：${r.weekMethod}`;
+                const detailText = `（管理員審核成功）[${r.weekPeriod || '一般期間'}] 完成進度：${r.weekMethod}`;
+                
+                const prevHall = curUser.hall;
+                if(r.hall) curUser.hall = r.hall;
+
                 sendRecord(`【周任回報】級別：${r.weekType}`, detailText).then(() => {
+                    curUser.hall = prevHall;
                     db.ref('week_requests/' + key).remove();
                     alert('已核准該筆周任務回報！');
                 });
@@ -529,8 +603,12 @@ async (subType,inputId,logTypeName)=>{
             if(!rDate || !rHour) return alert('請完整選擇補打卡的日期與時段！');
 
             db.ref('repair_requests').push({
-                user: curUser.acc, nick: curUser.nick,
-                repairDate: rDate, repairHour: rHour, type: rType,
+                user: curUser.acc, 
+                nick: curUser.nick,
+                hall: curUser.hall,
+                repairDate: rDate, 
+                repairHour: rHour, 
+                type: rType,
                 timestamp: Date.now()
             }).then(() => {
                 saveToLocalHistory(`申請補卡(${rType})`, false);
@@ -544,8 +622,10 @@ async (subType,inputId,logTypeName)=>{
                 let h = "";
                 snap.forEach(c => {
                     const r = c.val();
+                    if(curUser.role === 'sub_admin' && r.hall !== curUser.hall) return;
+
                     h += `<div class="p-3 bg-white rounded-xl border border-red-200 text-[11px] space-y-2 shadow-sm">
-                        <div><b>${r.nick}</b> 申請補卡</div>
+                        <div><b>${r.nick}</b> [${r.hall || '金好野'}] 申請補卡</div>
                         <div class="text-gray-500">日期：${r.repairDate}<br>時段：${r.repairHour}<br>項目：<span class="text-red-600 font-bold">${r.type}</span></div>
                         <div class="flex gap-2 justify-end">
                             <button onclick="rejectRepair('${c.key}')" class="px-2 py-1 text-gray-400 border rounded-lg hover:bg-gray-50">拒絕</button>
@@ -566,8 +646,11 @@ async (subType,inputId,logTypeName)=>{
                 const customDetail = `（管理員審核補卡成功）原申請時段：${r.repairHour}`;
 
                 db.ref('attendance_records').push({
-                    user: r.user, nick: r.nick,
-                    type: `[補] ${r.type}`, detail: customDetail,
+                    user: r.user, 
+                    nick: r.nick,
+                    hall: r.hall || '金好野',
+                    type: `[補] ${r.type}`, 
+                    detail: customDetail,
                     timestamp: r.timestamp,
                     time: targetTimeStr
                 }).then(() => {
@@ -591,6 +674,10 @@ async (subType,inputId,logTypeName)=>{
             const currentHour = now.getHours();
             const scheduleCount = {};
             
+            if(document.getElementById('scheduleLimitHint')) {
+                document.getElementById('scheduleLimitHint').innerText = curUser.role === 'admin' ? "(提示: 後台檢視模式/人數獨立計算)" : "(每廳每時段限4人)";
+            }
+
             globalRecordsForOptions.forEach(r => {
                 if(r.type === '預約排班' && r.detail) {
                     const rawDetail = r.detail.trim();
@@ -598,9 +685,12 @@ async (subType,inputId,logTypeName)=>{
                     if (parts.length >= 2) {
                         const recDate = parts[0]; 
                         const recSlot = parts[1] + " " + parts[2] + " " + parts[3]; 
-                        if (recDate === selectedDate) {
+                        
+                        const isHallMatch = curUser.role === 'admin' || r.hall === curUser.hall;
+                        if (recDate === selectedDate && isHallMatch) {
                             const cleanSlot = recSlot.split('(')[0].trim();
-                            scheduleCount[cleanSlot] = (scheduleCount[cleanSlot] || 0) + 1;
+                            const keyName = curUser.role === 'admin' ? `${cleanSlot}_[${r.hall||'金好野'}]` : cleanSlot;
+                            scheduleCount[keyName] = (scheduleCount[keyName] || 0) + 1;
                         }
                     }
                 }
@@ -613,36 +703,49 @@ async (subType,inputId,logTypeName)=>{
             for(let i=0; i<24; i++){
                 let h = i < 10 ? '0'+i : i; let nH = (i+1)%24; nH = nH < 10 ? '0'+nH : nH;
                 let slot = `${h}:00 - ${nH}:00`; 
-                let count = scheduleCount[slot] || 0;
                 
                 if (selectedDate === todayStr && i <= currentHour) {
                     sel.innerHTML += `<option value="${slot}" disabled class="text-gray-400">${slot} (❌ 已過時段)</option>`;
-                } else if(count >= 4) {
-                    sel.innerHTML += `<option value="${slot}" disabled class="text-red-400">${slot} (❌ 已額滿 4/4)</option>`;
+                } else if(curUser.role === 'admin') {
+                    let countYe = scheduleCount[`${slot}_[金好野]`] || 0;
+                    let countMing = scheduleCount[`${slot}_[金好命]`] || 0;
+                    sel.innerHTML += `<option value="${slot}">【管理】${slot} (野: ${countYe}/4 | 命: ${countMing}/4)</option>`;
                 } else {
-                    sel.innerHTML += `<option value="${slot}">${slot} (👤 目前 ${count}/4 人)</option>`;
+                    let count = scheduleCount[slot] || 0;
+                    if(count >= 4) {
+                        sel.innerHTML += `<option value="${slot}" disabled class="text-red-400">${slot} (❌ 已額滿 4/4)</option>`;
+                    } else {
+                        sel.innerHTML += `<option value="${slot}">${slot} (👤 目前 ${count}/4 人)</option>`;
+                    }
                 }
             }
             if(prevSelectedValue) sel.value = prevSelectedValue; 
 
             let myTodayHtml = "";
             globalRecordsForOptions.forEach(r => {
-                if(r.user === curUser.acc && r.type === '預約排班' && r.detail) {
+                if(r.type === '預約排班' && r.detail) {
                     const rawDetail = r.detail.trim();
                     const parts = rawDetail.split(' ');
                     if (parts.length >= 2 && parts[0] === selectedDate) {
                         const cleanSlot = (parts[1] + " " + parts[2] + " " + parts[3]).split('(')[0].trim();
-                        myTodayHtml += `<div class="flex justify-between items-center bg-blue-50 p-3 rounded-xl border border-blue-100 text-xs font-bold text-gray-700">
-                            <span><i class="fa fa-clock-o text-blue-500"></i> ${cleanSlot}</span>
-                            <button onclick="cancelSchedule('${r.key}')" class="text-red-500 border border-red-200 px-3 py-1 rounded-lg bg-white active:bg-red-50 shadow-sm font-bold">取消</button>
-                        </div>`;
+                        const shouldShow = curUser.role === 'admin' || r.user === curUser.acc;
+                        
+                        if(shouldShow) {
+                            const showLabel = curUser.role === 'admin' ? `<b>[${r.hall||'金好野'}] ${r.nick}</b>: ${cleanSlot}` : `<span><i class="fa fa-clock-o text-blue-500"></i> ${cleanSlot}</span>`;
+                            const btnText = curUser.role === 'admin' ? "除名排班" : "取消";
+                            myTodayHtml += `<div class="flex justify-between items-center bg-blue-50 p-3 rounded-xl border border-blue-100 text-xs font-bold text-gray-700">
+                                ${showLabel}
+                                <button onclick="cancelSchedule('${r.key}')" class="text-red-500 border border-red-200 px-3 py-1 rounded-lg bg-white active:bg-red-50 shadow-sm font-bold">${btnText}</button>
+                            </div>`;
+                        }
                     }
                 }
             });
-            document.getElementById('myTodayScheduleList').innerHTML = myTodayHtml || `<p class="text-gray-400 text-center col-span-full py-2 text-xs">您當天尚未安排任何時段</p>`;
+            document.getElementById('myTodayScheduleList').innerHTML = myTodayHtml || `<p class="text-gray-400 text-center col-span-full py-2 text-xs">當天尚未安排 any 排班數據</p>`;
         }
 
         window.submitSchedule = () => {
+            if(curUser.role === 'admin') return alert('最高管理員帳號僅供後台管理，請勿使用 admin 帳號進行排班。如需測試排班請另行註冊一般主播帳號。');
             const d = document.getElementById('dateInput').value;
             let t = document.getElementById('timeInput').value;
             if(!d || !t) return alert('請選擇日期與時段');
@@ -676,8 +779,9 @@ async (subType,inputId,logTypeName)=>{
         };
 
         window.cancelSchedule = (key) => {
-            if(confirm('確定要取消這個時段的排班嗎？')) {
-                db.ref('attendance_records/' + key).remove().then(() => { alert('已成功取消排班'); });
+            const confirmMsg = curUser.role === 'admin' ? '確定要強行刪除該名成員的排班嗎？' : '確定要取消這個時段的排班嗎？';
+            if(confirm(confirmMsg)) {
+                db.ref('attendance_records/' + key).remove().then(() => { alert('已成功移除排班'); });
             }
         };
 
@@ -732,12 +836,7 @@ async (subType,inputId,logTypeName)=>{
             const reversedList = list.reverse();
 
             reversedList.forEach(r => {
-            const isImg =
-r.detail &&
-(
-    r.detail.startsWith('data:image') ||
-    r.detail.startsWith('https://res.cloudinary.com')
-);
+                const isImg = r.detail && (r.detail.startsWith('data:image') || r.detail.startsWith('https://res.cloudinary.com'));
                 const cleanShowDetail = (r.type === '預約排班') ? r.detail.split('(')[0].trim() : r.detail;
                 
                 let personalDisplay = isImg ? `<img src="${r.detail}" class="record-img mx-auto" loading="lazy" decoding="async" onclick="window.open(this.src)">` : `<div class="bg-gray-50 p-2 rounded text-gray-500 font-bold">${cleanShowDetail}</div>`;
@@ -758,12 +857,16 @@ r.detail &&
                     if (personalCount < 30) { p += personalCard; personalCount++; }
                 }
 
+                if (curUser.role === 'sub_admin' && r.hall !== curUser.hall) return;
+
                 let isMatch = true;
                 if (keyword) {
                     const nickMatch = r.nick && r.nick.toLowerCase().includes(keyword);
                     const accMatch = r.user && r.user.toLowerCase().includes(keyword);
                     const typeMatch = r.type && r.type.toLowerCase().includes(keyword);
-                    if (!nickMatch && !accMatch && !typeMatch) isMatch = false;
+                    const hallMatch = r.hall && r.hall.toLowerCase().includes(keyword);
+                    const detailMatch = r.detail && r.detail.toLowerCase().includes(keyword);
+                    if (!nickMatch && !accMatch && !typeMatch && !hallMatch && !detailMatch) isMatch = false;
                 }
                 if (searchDate) {
                     const formattedSearchDate = searchDate.replace(/-/g, '/');
@@ -785,14 +888,17 @@ r.detail &&
                             adminDisplay = `<div class="bg-gray-50 p-2 rounded text-gray-500 font-bold">${cleanShowDetail}</div>`;
                         }
 
+                        // 【權限收緊】只有最高管理員 admin 才能看到並執行刪除按鈕
+                        const deleteBtnHtml = curUser.role === 'admin' ? `<button onclick="adminDeleteRecord('${r.key}', '${r.nick}')" class="text-[10px] bg-red-50 text-red-600 border border-red-200 px-2 py-0.5 rounded font-bold hover:bg-red-100 transition">刪除</button>` : '';
+
                         const adminCard = `<div class="p-4 bg-white rounded-2xl shadow-sm border border-gray-100 text-[11px]">
                             <div class="flex justify-between items-center mb-1">
-                                <span class="font-bold text-gray-700">${r.nick} (${r.user})</span>
+                                <span class="font-bold text-gray-700">${r.nick} (${r.user}) <span class="bg-blue-50 text-blue-600 px-1 rounded text-[9px]">${r.hall || '金好野'}</span></span>
                                 <span class="text-gray-300 font-normal">${r.time}</span>
                             </div>
                             <div class="flex justify-between items-center mt-1">
                                 <span class="${typeTagClass}">${r.type}</span>
-                                <button onclick="adminDeleteRecord('${r.key}', '${r.nick}')" class="text-[10px] bg-red-50 text-red-600 border border-red-200 px-2 py-0.5 rounded font-bold hover:bg-red-100 transition">刪除</button>
+                                ${deleteBtnHtml}
                             </div>
                             <div class="mt-2">${adminDisplay}</div>
                         </div>`;
@@ -822,13 +928,17 @@ r.detail &&
         }
 
         window.exportToExcel = () => {
+            if (curUser.role !== 'admin') return alert('您的權限不足，無法執行資料導出操作！');
             if(!db) return alert('資料庫未連線');
             alert('系統正在索取完整 45 天數據包，請稍候...');
             const limitTime = Date.now() - (45 * 24 * 60 * 60 * 1000);
             
             db.ref('attendance_records').orderByChild('timestamp').startAt(limitTime).once('value', snap => {
                 const fullRecords = [];
-                snap.forEach(c => { fullRecords.push(c.val()); });
+                snap.forEach(c => { 
+                    const val = c.val();
+                    fullRecords.push(val); 
+                });
                 if (fullRecords.length === 0) return alert('目前無任何數據可供導出');
 
                 const dateCountMap = {};
@@ -844,6 +954,7 @@ r.detail &&
                     const cleanExcelDetail = (r.type === '預約排班') ? r.detail.split('(')[0].trim() : (isImg ? "（已正常提交截圖，請至系統核對圖檔）" : r.detail);
                     
                     return { 
+                        "隸屬廳別": r.hall || "金好野",
                         "成員暱稱": r.nick, "成員帳號": r.user, 
                         "動作日期": t[0], "動作時間": t[1], 
                         "當天累計考勤次數": dateCountMap[`${r.user}_${t[0]}`], 
@@ -854,7 +965,7 @@ r.detail &&
                 const ws = XLSX.utils.json_to_sheet(data);
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, ws, "考勤回報整合報表");
-                XLSX.writeFile(wb, `金好家族45天考勤綜合報表_${new Date().toLocaleDateString().replace(/\//g,'-')}.xlsx`);
+                XLSX.writeFile(wb, `全家族45天考勤綜合總報表_${new Date().toLocaleDateString().replace(/\//g,'-')}.xlsx`);
                 alert('🎉 報表已成功導出！');
             });
         };
@@ -863,21 +974,55 @@ r.detail &&
             db.ref('users').on('value', snap => {
                 let h = ""; let count = 0;
                 snap.forEach(c => {
-                    const u = c.val(); if(u.acc === 'admin') return; count++;
+                    const u = c.val(); if(u.acc === 'admin') return; 
+                    
+                    if(curUser.role === 'sub_admin' && u.hall !== curUser.hall) return;
+                    count++;
+                    
+                    const isHighestAdmin = curUser.role === 'admin';
+                    
                     h += `<div class="bg-white p-3 rounded-xl border mb-2 text-xs space-y-2 shadow-sm">
                         <div class="flex justify-between items-center">
-                            <span><b>${u.nick}</b> (${u.acc})</span>
-                            <button onclick="deleteUser('${u.acc}')" class="text-red-500 border border-red-200 px-2 py-0.5 rounded text-[11px]">除名</button>
+                            <span><b>${u.nick}</b> (${u.acc}) <span class="bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded text-[10px] font-bold">${u.hall || '金好野'}</span></span>
+                            ${isHighestAdmin ? `<button onclick="deleteUser('${u.acc}')" class="text-red-500 border border-red-200 px-2 py-0.5 rounded text-[11px]">除名</button>` : ''}
                         </div>
-                        <div class="text-right">
-                            <button onclick="adminResetPassword('${u.acc}', '${u.nick}')" class="text-blue-600 bg-blue-50 border border-blue-200 px-3 py-1 rounded-lg text-[11px] font-bold">重設密碼</button>
+                        
+                        ${isHighestAdmin ? `
+                        <div class="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-gray-100">
+                            <div>
+                                <label class="text-[10px] text-gray-400 block mb-0.5">權限配置</label>
+                                <select onchange="updateUserRole('${u.acc}', this.value)" class="w-full p-1 border rounded bg-gray-50 text-[11px]">
+                                    <option value="user" ${u.role==='user'?'selected':''}>一般主播</option>
+                                    <option value="sub_admin" ${u.role==='sub_admin'?'selected':''}>次級廳長</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-gray-400 block mb-0.5">廳別匹配</label>
+                                <select onchange="updateUserHall('${u.acc}', this.value)" class="w-full p-1 border rounded bg-gray-50 text-[11px]">
+                                    <option value="金好野" ${u.hall==='金好野'?'selected':''}>金好野</option>
+                                    <option value="金好命" ${u.hall==='金好命'?'selected':''}>金好命</option>
+                                </select>
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        <div class="text-right pt-1">
+                            <button onclick="adminResetPassword('${u.acc}', '${u.nick}')" class="text-blue-600 bg-blue-50 border border-blue-200 px-3 py-0.5 rounded text-[11px] font-bold">重設密碼</button>
                         </div>
                     </div>`;
                 });
-                document.getElementById('userList').innerHTML = h;
+                document.getElementById('userList').innerHTML = h || "<p class='text-gray-400 text-center py-2 text-xs w-full'>目前本廳尚無核准成員</p>";
                 document.getElementById('userCount').innerText = count;
             });
         }
+
+        window.updateUserRole = (acc, role) => {
+            db.ref(`users/${acc}/role`).set(role).then(() => alert('權限指派成功！'));
+        };
+
+        window.updateUserHall = (acc, hall) => {
+            db.ref(`users/${acc}/hall`).set(hall).then(() => alert(`已將該主播成功匹配至：${hall}`));
+        };
 
         window.adminResetPassword = (acc, nick) => {
             const newPwd = prompt(`請輸入要幫「${nick}」設定的新密碼：`);
@@ -894,6 +1039,8 @@ r.detail &&
                 let h = "";
                 snap.forEach(c => {
                     const u = c.val();
+                    if(curUser.role === 'sub_admin' && u.hall !== curUser.hall) return;
+
                     h += `<div class="p-4 bg-red-50 rounded-2xl flex justify-between items-center text-xs mb-3 shadow-sm">
                         <span><b>${u.nick}</b> (${u.acc})</span>
                         <button onclick="approve('${u.acc}')" class="bg-red-500 text-white px-4 py-2 rounded-xl font-bold">准許</button>
@@ -905,13 +1052,21 @@ r.detail &&
 
         window.approve = (acc) => {
             db.ref('pending_users/'+acc).once('value', snap => {
-                db.ref('users/'+acc).set(snap.val()).then(() => db.ref('pending_users/'+acc).remove());
+                const uData = snap.val();
+                uData.hall = curUser.role === 'sub_admin' ? curUser.hall : '金好野'; 
+                db.ref('users/'+acc).set(uData).then(() => db.ref('pending_users/'+acc).remove());
             });
         };
 
         window.doUpdateName = () => {
             const n = document.getElementById('newNick').value.trim();
-            if(n && curUser.acc !== 'admin') db.ref('users/'+curUser.acc+'/nick').set(n).then(() => location.reload());
+            if(!n) return alert('暱稱不能為空！');
+            if(curUser.acc !== 'admin') {
+                db.ref('users/'+curUser.acc+'/nick').set(n).then(() => {
+                    alert('暱稱修改成功，頁面即將重新整理！');
+                    location.reload();
+                });
+            }
         };
 
         function bindNavEvents() {

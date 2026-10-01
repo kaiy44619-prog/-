@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>金好家族管理系統 - 雙廳分流升級版</title>
+    <title>金好家族管理系統</title>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -35,6 +35,974 @@
         .loading-text { color: #9ca3af; font-size: 13px; text-align: center; padding: 30px 0; font-weight: bold; width: 100%; }
         #loadMoreAdminBtn { display: block; width: 100%; padding: 12px; background-color: #ef4444; color: white; font-weight: bold; border-radius: 12px; text-align: center; margin-top: 15px; cursor: pointer; transition: background 0.2s; }
         #loadMoreAdminBtn:hover { background-color: #dc2626; }
+        #loadMoreAdminBtn:disabled { background-color: #e5e7eb; color: #9ca3af; cursor: not-allowed; }
+    </style>
+</head>
+<body class="bg-gray-100 antialiased">
+    <div id="app" class="max-w-4xl mx-auto px-4 py-6">
+        
+        <div id="authPage" class="max-w-md mx-auto bg-white p-8 rounded-3xl shadow-xl mt-10 text-center">
+            <h2 class="text-2xl font-bold mb-6 text-blue-600">金好家族系統</h2>
+            <div id="loginForm" class="space-y-4 text-left">
+                <input id="loginAcc" type="text" placeholder="帳號" class="w-full p-4 border rounded-2xl outline-none">
+                <input id="loginPwd" type="password" placeholder="密碼" class="w-full p-4 border rounded-2xl outline-none">
+                <button id="loginBtn" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg active:scale-95 transition">進入系統</button>
+                <p class="text-center text-sm text-gray-400 mt-4 cursor-pointer" onclick="toggleAuth(true)">成員註冊申請</p>
+            </div>
+            <div id="regForm" class="hidden space-y-4 text-left">
+                <p class="text-xs text-red-500 font-bold mb-2">註冊後請聯絡岳笙審核通過</p>
+                <input id="regAcc" type="text" placeholder="設定登入帳號" class="w-full p-4 border rounded-2xl outline-none">
+                <input id="regNick" type="text" placeholder="顯示暱稱" class="w-full p-4 border rounded-2xl outline-none">
+                <input id="regPwd" type="password" placeholder="設定密碼" class="w-full p-4 border rounded-2xl outline-none">
+                <button id="regBtn" class="w-full bg-green-500 text-white py-4 rounded-2xl font-bold shadow-lg active:scale-95 transition">提交註冊申請</button>
+                <p class="text-center text-sm text-gray-400 mt-4 cursor-pointer" onclick="toggleAuth(false)">返回登入</p>
+            </div>
+        </div>
+
+        <div id="privateLoginModal" class="hidden fixed inset-0 z-[10000] bg-black/60 flex items-center justify-center p-4">
+            <div class="w-full max-w-md bg-white rounded-3xl shadow-2xl border-4 border-red-500 overflow-hidden">
+                <div class="bg-red-600 text-white px-5 py-4 text-center">
+                    <div class="text-2xl font-black">⚠️ 今日私聊任務未達標</div>
+                    <div class="text-sm font-bold mt-1">登入後請先完成今日開發任務</div>
+                </div>
+                <div class="p-6 text-center">
+                    <div id="privateLoginModalProgress" class="text-lg font-black text-gray-800 mb-5">私訊開發 0/10　｜　有效回覆 0/5</div>
+                    <div class="grid grid-cols-2 gap-3 mb-5">
+                        <div class="bg-red-50 border-2 border-red-200 rounded-2xl p-4">
+                            <div class="text-xs text-red-500 font-bold">私訊開發</div>
+                            <div id="privateLoginModalOutreach" class="text-3xl font-black text-red-600">0/10</div>
+                        </div>
+                        <div class="bg-orange-50 border-2 border-orange-200 rounded-2xl p-4">
+                            <div class="text-xs text-orange-500 font-bold">有效回覆</div>
+                            <div id="privateLoginModalEffective" class="text-3xl font-black text-orange-600">0/5</div>
+                        </div>
+                    </div>
+                    <div id="privateLoginModalNeed" class="bg-red-600 text-white rounded-2xl p-4 font-black text-sm mb-5">今天還需要完成任務</div>
+                    <button onclick="goFromPrivateLoginModal()" class="w-full bg-red-600 hover:bg-red-700 text-white py-4 rounded-2xl font-black text-base shadow-lg">立即前往私聊任務</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="mainPage" class="hidden">
+            <div id="privateTaskAlert" class="hidden fixed top-2 right-3 z-[9999] w-auto max-w-[280px]">
+                <div class="bg-red-600 text-white rounded-xl shadow-lg border border-red-300 p-2.5">
+                    <div class="flex items-center gap-3">
+                        <div class="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-sm flex-shrink-0"><i class="fa fa-bell"></i></div>
+                        <div class="flex-1 min-w-0"><div class="font-black text-xs">⚠️ 今日私聊任務尚未完成</div><div id="privateTaskAlertText" class="text-[11px] mt-0.5 font-bold">私訊開發 0/10｜有效回覆 0/5</div></div>
+                        <button onclick="openPrivateChatTask()" class="bg-white text-red-600 px-2.5 py-1.5 rounded-lg text-[11px] font-black shadow">立即完成</button>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-between items-center mb-4 px-2">
+                <h1 class="text-xl font-bold text-blue-600">Hi, <span id="userHello"></span></h1>
+                <button onclick="logout()" class="text-xs bg-gray-200 px-3 py-1 rounded text-gray-500 hover:bg-gray-300 transition">登出</button>
+            </div>
+
+            <nav id="mainNav" class="grid grid-cols-3 sm:grid-cols-6 bg-white rounded-2xl shadow-sm mb-4 p-1 border text-xs gap-1 text-center">
+                <button class="py-3 rounded-xl font-bold nav-btn active" data-target="schedule">預約排班</button>
+                <button class="py-3 rounded-xl font-bold nav-btn" data-target="checkin">日常打卡</button>
+                <button class="py-3 rounded-xl font-bold nav-btn" data-target="wingTab">翅膀回報</button>
+                <button class="py-3 rounded-xl font-bold nav-btn" data-target="privateChatTab">私聊開發</button>
+                <button class="py-3 rounded-xl font-bold nav-btn" data-target="history">歷程紀錄</button>
+                <button class="py-3 rounded-xl font-bold nav-btn" data-target="profile">個人中心</button>
+            </nav>
+
+            <section id="schedule" class="tab-content active bg-white p-6 rounded-2xl border">
+                <h3 class="font-bold mb-2 text-sm text-gray-700">1. 選擇預約日期 (僅限3天內)</h3>
+                <input type="date" id="dateInput" class="w-full p-4 border rounded-xl mb-4 bg-gray-50 text-sm font-bold" onchange="updateTimeOptions()">
+                <h3 class="font-bold mb-2 text-sm text-gray-700">2. 選擇排班時段 <span id="scheduleLimitHint">(各廳獨立限5人)</span></h3>
+                <select id="timeInput" class="w-full p-4 border rounded-xl mb-4 bg-gray-50 text-sm font-bold"></select>
+                <button onclick="submitSchedule()" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold shadow-md active:scale-95 transition mb-6">送出預約排班</button>
+                <h4 class="font-bold text-xs text-blue-600 mb-2"><i class="fa fa-calendar-check-o"></i> 系統排班紀錄：</h4>
+                <div id="myTodayScheduleList" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto scroll-container"><div class="loading-text"><i class="fa fa-spinner fa-spin"></i> 排班資料加載中...</div></div>
+            </section>
+
+            <section id="checkin" class="tab-content bg-white p-6 rounded-2xl border text-center max-w-xl mx-auto">
+                <div id="timeStatus" class="mb-4 p-3 rounded-xl text-xs font-bold bg-blue-50 text-blue-600">📌 提示：同一個小時內的上下班卡各自限提交 1 次。</div>
+                <div class="mb-4 text-left">
+                    <label class="block w-full border-2 border-dashed border-gray-300 rounded-2xl p-6 cursor-pointer hover:bg-gray-50 transition text-center">
+                        <i class="fa fa-camera text-3xl text-gray-300 mb-2"></i>
+                        <span id="fileNameDisplay" class="block text-sm text-gray-500">點擊選取、拖曳或拍攝日常打卡截圖</span>
+                        <input type="file" id="imgInput" accept="image/*" class="hidden" onchange="previewImage('imgInput', 'fileNameDisplay')">
+                    </label>
+                </div>
+                <div id="checkinBtnContainer" class="mb-6"></div>
+            </section>
+
+            <section id="wingTab" class="tab-content bg-white p-6 rounded-2xl border max-w-xl mx-auto">
+                <h3 class="font-bold text-blue-600 mb-4 text-base border-b pb-2"><i class="fa fa-paper-plane"></i> 主播翅膀禮物回報專區</h3>
+                <div class="space-y-4 text-sm">
+                    <div>
+                        <span class="block font-bold text-gray-700 mb-2">1. 請選擇分類期間：</span>
+                        <div class="flex gap-4 bg-gray-50 p-3 rounded-xl border font-bold">
+                            <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="wingPeriod" value="一般期間" checked> 一般期間</label>
+                            <label class="flex items-center gap-1 cursor-pointer text-red-600"><input type="radio" name="wingPeriod" value="廳戰期間"> 🔥 廳戰期間</label>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="block font-bold text-gray-700 mb-2">2. 請選擇翅膀種類：</span>
+                        <div class="flex flex-wrap gap-4 bg-gray-50 p-3 rounded-xl border font-bold">
+                            <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="wingType" value="紅羽" checked> 紅羽</label>
+                            <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="wingType" value="粉羽"> 粉羽</label>
+                            <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="wingType" value="璀璨"> 璀璨</label>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="block font-bold text-gray-700 mb-2">3. 上傳收禮截圖證明：</span>
+                        <label class="block w-full border-2 border-dashed border-gray-300 rounded-2xl p-6 cursor-pointer hover:bg-gray-50 transition text-center bg-gray-50">
+                            <i class="fa fa-image text-3xl text-gray-300 mb-2"></i>
+                            <span id="wingFileName" class="block text-xs text-gray-500">點擊選取或拍攝翅膀收禮截圖</span>
+                            <input type="file" id="wingImgInput" accept="image/*" class="hidden" onchange="previewImage('wingImgInput', 'wingFileName')">
+                        </label>
+                    </div>
+                    <button onclick="submitWingReport()" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold shadow-md active:scale-95 transition">送出翅膀回報審查</button>
+                </div>
+            </section>
+
+            <section id="privateChatTab" class="tab-content bg-white p-6 rounded-2xl border max-w-xl mx-auto">
+                <div class="flex justify-between items-center mb-4"><div><h3 class="font-bold text-red-600 text-base"><i class="fa fa-comments"></i> 每日私聊開發任務</h3><p class="text-[11px] text-gray-400 mt-1">每天完成 10 次私訊開發，並取得 5 筆有效回覆</p></div><span id="privateChatDate" class="text-[11px] font-bold text-gray-400"></span></div>
+                <div class="grid grid-cols-2 gap-3 mb-5">
+                    <div class="bg-red-50 border border-red-100 rounded-2xl p-4 text-center"><div class="text-[11px] text-red-400 font-bold">私訊開發</div><div id="privateOutreachProgress" class="text-2xl font-black text-red-600 mt-1">0 / 10</div><div class="h-2 bg-red-100 rounded-full mt-2 overflow-hidden"><div id="privateOutreachBar" class="h-full bg-red-500 rounded-full transition-all" style="width:0%"></div></div></div>
+                    <div class="bg-green-50 border border-green-100 rounded-2xl p-4 text-center"><div class="text-[11px] text-green-500 font-bold">有效回覆</div><div id="privateEffectiveProgress" class="text-2xl font-black text-green-600 mt-1">0 / 5</div><div class="h-2 bg-green-100 rounded-full mt-2 overflow-hidden"><div id="privateEffectiveBar" class="h-full bg-green-500 rounded-full transition-all" style="width:0%"></div></div></div>
+                </div>
+                <div id="privateTaskStatus" class="mb-4 p-3 rounded-xl bg-red-50 text-red-600 text-xs font-bold border border-red-100">⚠️ 今日任務尚未完成，請繼續開發。</div>
+                <div class="space-y-3">
+                    <div><label class="block text-xs font-bold text-gray-600 mb-1">對象暱稱／識別名稱</label><input id="privateTarget" type="text" maxlength="50" placeholder="例如：小王、阿哲、某牌友" class="w-full p-3 border rounded-xl text-sm outline-none"></div>
+                    <div><label class="block text-xs font-bold text-gray-600 mb-1">本次私聊結果</label><select id="privateStatus" class="w-full p-3 border rounded-xl text-sm bg-white"><option value="contacted">已私訊（對方尚未回覆）</option><option value="replied">一般回覆（有回覆，但尚未形成有效互動）</option><option value="effective">有效回覆（有實質互動／有明確興趣）</option></select></div>
+                    <div><label class="block text-xs font-bold text-gray-600 mb-1">簡短備註（選填）</label><input id="privateNote" type="text" maxlength="100" placeholder="例如：聊到直播、遊戲、下次再約" class="w-full p-3 border rounded-xl text-sm outline-none"></div>
+                    <button onclick="submitPrivateChatReport()" class="w-full bg-red-600 text-white py-4 rounded-xl font-bold shadow-md active:scale-95 transition">＋ 新增一次私聊開發</button>
+                </div>
+                <div class="border-t mt-6 pt-4"><h4 class="font-bold text-sm text-gray-700 mb-3">今日已回報紀錄</h4><div id="privateTodayList" class="space-y-2 max-h-80 overflow-y-auto scroll-container"><p class="text-center text-gray-400 text-xs py-4">尚無今日紀錄</p></div></div>
+            </section>
+
+            <section id="history" class="tab-content bg-white p-4 rounded-2xl border min-h-[300px]">
+                <p class="text-gray-400 text-xs mb-2 px-1">💡 系統提示：僅顯示您個人的最新 30 筆歷史回報動態</p>
+                <div class="flex gap-2 mb-4">
+                    <button onclick="setHistoryFilter('all')" id="historyFilterAll" class="history-filter-btn flex-1 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold">全部</button>
+                    <button onclick="setHistoryFilter('checkin')" id="historyFilterCheckin" class="history-filter-btn flex-1 py-2 rounded-xl bg-gray-100 text-gray-500 text-xs font-bold">打卡</button>
+                    <button onclick="setHistoryFilter('wing')" id="historyFilterWing" class="history-filter-btn flex-1 py-2 rounded-xl bg-gray-100 text-gray-500 text-xs font-bold">翅膀</button>
+                    <button onclick="setHistoryFilter('private')" id="historyFilterPrivate" class="history-filter-btn flex-1 py-2 rounded-xl bg-gray-100 text-gray-500 text-xs font-bold">私聊</button>
+                </div>
+                <div id="personalList" class="grid grid-cols-1 sm:grid-cols-2 gap-4 scroll-container"><div class="loading-text col-span-full"><i class="fa fa-spinner fa-spin"></i> 正在加載您的個人歷程紀錄...</div></div>
+                <h3 class="font-bold text-gray-700 text-sm mt-6 mb-2 border-t pt-4 px-1"><i class="fa fa-mobile text-blue-500"></i> 本地留存紀錄 </h3>
+                <div id="localLogsList" class="space-y-2 max-h-48 overflow-y-auto p-1 scroll-container text-xs text-gray-500"></div>
+            </section>
+
+            <section id="profile" class="tab-content bg-white p-6 rounded-2xl border text-center max-w-md mx-auto">
+                <div class="text-left space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 mb-1">隸屬廳別（如需更改請洽管理員）</label>
+                        <input id="myHallDisplay" type="text" class="w-full p-4 border rounded-xl text-sm bg-gray-100 text-gray-600 font-bold" readonly>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 mb-1">主播自定義顯示暱稱</label>
+                        <input id="newNick" type="text" class="w-full p-4 border rounded-xl text-sm" placeholder="輸入新暱稱">
+                    </div>
+                    <button onclick="doUpdateName()" class="w-full bg-black text-white py-4 rounded-xl font-bold active:scale-95 transition">儲存修改</button>
+                </div>
+            </section>
+
+            <section id="admin" class="tab-content bg-white p-6 rounded-2xl border-2 border-red-500 shadow-xl">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="font-bold text-red-600 text-lg" id="adminPanelTitle">家族管理後台</h3>
+                    <span class="text-xs bg-red-100 text-red-600 px-2 py-1 rounded font-bold" id="adminBadge">權限已載入</span>
+                </div>
+                
+                <!-- 報表導出區塊：只有最高管理員看的到 -->
+                <div id="adminExportContainer" class="hidden">
+                    <h4 class="font-bold text-sm mb-3 text-gray-600">數據報表匯出</h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
+                        <div><label class="block text-[11px] font-bold text-gray-500 mb-1">開始日期</label><input type="date" id="exportStartDate" class="w-full p-3 border rounded-xl text-xs bg-white"></div>
+                        <div><label class="block text-[11px] font-bold text-gray-500 mb-1">結束日期</label><input type="date" id="exportEndDate" class="w-full p-3 border rounded-xl text-xs bg-white"></div>
+                        <div><label class="block text-[11px] font-bold text-gray-500 mb-1">匯出類型</label><select id="exportType" class="w-full p-3 border rounded-xl text-xs bg-white"><option value="all">全部資料</option><option value="checkin">日常打卡</option><option value="wing">翅膀回報</option><option value="schedule">預約排班</option><option value="private">私聊開發</option></select></div>
+                    </div>
+                    <button onclick="exportToExcel()" class="max-w-md bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-2xl shadow-lg mb-6 flex justify-center items-center gap-2 active:scale-95 transition">
+                        <i class="fa fa-file-excel-o"></i> 匯出 Excel 報表
+                    </button>
+                </div>
+
+                <div id="adminPrivateChatPanel" class="mb-6 bg-red-50 border border-red-200 rounded-2xl p-4"><div class="flex justify-between items-center mb-3"><h4 class="font-bold text-sm text-red-600"><i class="fa fa-comments"></i> 今日私聊開發進度</h4><span class="text-[10px] text-red-400 font-bold">目標：10 次私訊＋5 筆有效回覆</span></div><div id="adminPrivateChatStats" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-72 overflow-y-auto scroll-container"><p class="text-gray-400 text-center text-xs py-3 col-span-full">正在載入...</p></div></div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="md:col-span-1 space-y-6">
+                        <div>
+                            <h4 class="font-bold text-sm mb-2 text-gray-600">待審核加入申請</h4>
+                            <div id="pendingList" class="space-y-2 bg-gray-50 p-2 rounded-xl border min-h-[60px]"><div class="loading-text"><i class="fa fa-spinner fa-spin"></i> 載入中...</div></div>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-sm mb-2 text-gray-600">家族成員 (<span id="userCount">0</span>)</h4>
+                            <div id="userList" class="space-y-2 max-h-48 overflow-y-auto bg-gray-50 p-2 rounded-xl border scroll-container"><div class="loading-text"><i class="fa fa-spinner fa-spin"></i> 載入中...</div></div>
+                        </div>
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <div class="bg-gray-50 p-4 rounded-2xl border border-gray-200 mb-4 space-y-3">
+                            <span class="text-xs font-bold text-gray-600 block"><i class="fa fa-search"></i> 後台數據實時搜尋與高效過濾面板</span>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <input type="text" id="adminSearchKeyword" placeholder="搜尋成員暱稱、廳別或[廳戰]..." class="p-2 border rounded-xl text-xs outline-none bg-white" oninput="resetAdminPagination()">
+                                <input type="date" id="adminSearchDate" class="p-2 border rounded-xl text-xs outline-none bg-white" onchange="resetAdminPagination()">
+                            </div>
+                            <div class="flex justify-between items-center text-[11px] text-gray-400">
+                                <span>💡 提示：留空代表看全家族完整歷程紀錄</span>
+                                <button onclick="clearAdminFilters()" class="text-blue-500 font-bold">重置過濾器</button>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between items-center mb-2 px-1">
+                            <h4 class="font-bold text-sm text-red-600"><i class="fa fa-exclamation-triangle"></i> 全體動態流水帳</h4>
+                            <span class="text-xs text-gray-500">符合條件總計: <span id="adminMatchCount" class="font-bold text-red-500">0</span> 筆</span>
+                        </div>
+                        
+                        <div id="adminAllList" class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-1">
+                            <div class="loading-text col-span-full"><i class="fa fa-spinner fa-spin"></i> 正在異步同步完整雲端數據流...</div>
+                        </div>
+                        
+                        <button id="loadMoreAdminBtn" onclick="loadMoreAdminData()">載入後續 20 筆數據</button>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        let db = null;
+        let curUser = null;
+        let globalRecordsForOptions = [];
+        let globalPrivateChatRecords = [];
+        let adminCurrentLimit = 20;
+
+        // Firebase Config[span_0](start_span)[span_0](end_span)
+        const firebaseConfig = {
+          apiKey: "AIzaSyB7e1itC17IxcSpNN1eBnLuTI43uHZ-fYQ",
+          authDomain: "yuesheng-system.firebaseapp.com",
+          databaseURL: "https://yuesheng-system-default-rtdb.asia-southeast1.firebasedatabase.app",
+          projectId: "yuesheng-system",
+          storageBucket: "yuesheng-system.firebasestorage.app",
+          messagingSenderId: "975395892406",
+          appId: "1:975395892406:web:97dabd72e189c4e79aca17"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.database();
+        console.log("Firebase連線成功");
+
+        const CLOUD_NAME = "dxfnvpflp";
+        const UPLOAD_PRESET = "jinhao_upload";
+
+        async function uploadToCloudinary(file) {
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("upload_preset", UPLOAD_PRESET);
+            const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, { method: "POST", body: formData });
+            const data = await res.json();
+            if (!data.secure_url) throw new Error("Cloudinary上傳失敗");
+            return data.secure_url;
+        }
+
+        function initDateRange() {
+            const today = new Date();
+            const day3 = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+            const formatDate = (d) => d.toLocaleDateString('zh-TW', {year:'numeric',month:'2-digit',day:'2-digit'}).replace(/\//g,'-');
+            
+            if(document.getElementById('dateInput')) {
+                const minStr = formatDate(today);
+                document.getElementById('dateInput').value = minStr;
+                document.getElementById('dateInput').min = minStr;
+                document.getElementById('dateInput').max = formatDate(day3);
+            }
+
+            const repairHourSel = document.getElementById('repairHour');
+            if(repairHourSel) {
+                repairHourSel.innerHTML = "";
+                for(let i=0; i<24; i++) {
+                    let h = i < 10 ? '0'+i : i; let nH = (i+1)%24; nH = nH < 10 ? '0'+nH : nH;
+                    repairHourSel.innerHTML += `<option value="${h}:00 - ${nH}:00">${h}:00 - ${nH}:00</option>`;
+                }
+            }
+        }
+
+        function checkTime() {
+            const now = new Date();
+            const m = now.getMinutes();
+            const container = document.getElementById('checkinBtnContainer');
+            if(!container) return;
+            
+            if (m === 0) {
+                container.innerHTML = `<div class="grid grid-cols-2 gap-4"><button onclick="handleDailyCheckin('上班打卡')" class="bg-green-500 text-white py-4 rounded-xl font-bold shadow-lg active:scale-95 transition">提交【上班】打卡</button><button onclick="handleDailyCheckin('下班打卡')" class="bg-orange-500 text-white py-4 rounded-xl font-bold shadow-lg active:scale-95 transition">提交【下班】打卡</button></div>`;
+            } else if (m >= 1 && m <= 3) {
+                container.innerHTML = `<button onclick="handleDailyCheckin('上班打卡')" class="w-full bg-green-500 text-white py-4 rounded-xl font-bold shadow-lg active:scale-95 transition">提交【上班】截圖打卡</button>`;
+            } else if (m >= 58 && m <= 59) {
+                container.innerHTML = `<button onclick="handleDailyCheckin('下班打卡')" class="w-full bg-orange-500 text-white py-4 rounded-xl font-bold shadow-lg active:scale-95 transition">提交【下班】截圖打卡</button>`;
+            } else {
+                container.innerHTML = `<button class="w-full disabled-btn text-white py-4 rounded-xl font-bold shadow-md" disabled>非打卡時段 (開放時段：58分 ~ 03分)</button>`;
+            }
+        }
+
+        window.toggleAuth = (isReg) => {
+            document.getElementById('loginForm').classList.toggle('hidden', isReg);
+            document.getElementById('regForm').classList.toggle('hidden', !isReg);
+        };
+
+        document.getElementById('loginBtn').onclick = () => {
+            if(!db) return alert('資料庫尚未連線，請重新整理頁面');
+            const acc = document.getElementById('loginAcc').value.trim().toLowerCase();
+            const pwd = document.getElementById('loginPwd').value.trim();
+            if(!acc || !pwd) return alert('請填寫帳號與密碼');
+            
+            if(acc === 'admin' && pwd === '123') {
+                loginOk({ acc:'admin', nick:'最高管理員', role:'admin', hall:'全部' });
+            } else {
+                db.ref('users/'+acc).once('value', snap => {
+                    const d = snap.val();
+                    if(d && d.pwd === pwd) {
+                        loginOk({
+                            acc: d.acc,
+                            nick: d.nick,
+                            role: d.role || 'user',
+                            hall: d.hall || '金好野'
+                        });
+                    } else {
+                        alert('帳密錯誤或管理員未核准您的註冊申請');
+                    }
+                });
+            }
+        };
+
+        document.getElementById('regBtn').onclick = () => {
+            if(!db) return alert('資料庫尚未連線');
+            const acc = document.getElementById('regAcc').value.trim().toLowerCase();
+            const nick = document.getElementById('regNick').value.trim();
+            const pwd = document.getElementById('regPwd').value.trim();
+            if(!acc || !nick || !pwd) return alert('請填寫完整註冊資料');
+            db.ref('pending_users/'+acc).set({ acc, nick, pwd, hall: '金好野', role: 'user', timestamp: Date.now() }).then(() => { alert('已提交！請聯絡岳笙審核。'); toggleAuth(false); });
+        };
+
+        function loginOk(u) {
+            curUser = u;
+            document.getElementById('authPage').classList.add('hidden');
+            document.getElementById('mainPage').classList.remove('hidden');
+            
+            document.getElementById('userHello').innerText = `${curUser.nick} [${curUser.hall}]`;
+            if(document.getElementById('myHallDisplay')) document.getElementById('myHallDisplay').value = curUser.hall;
+            if(document.getElementById('newNick')) document.getElementById('newNick').value = curUser.nick;
+            
+            if(document.getElementById('timeStatus')) {
+                document.getElementById('timeStatus').innerText = `📌 提示：當前已對接【${curUser.hall}】打卡系統。同小時內上下班卡各限1次。`;
+            }
+
+            if(curUser.role === 'admin' || curUser.role === 'sub_admin') {
+                const nav = document.getElementById('mainNav');
+                if(!document.getElementById('adminNavBtn')) {
+                    nav.className = "grid grid-cols-3 sm:grid-cols-7 bg-white rounded-2xl shadow-sm mb-4 p-1 border text-xs gap-1 text-center";
+                    nav.innerHTML += `<button id="adminNavBtn" class="py-3 rounded-xl font-bold nav-btn border border-red-100 text-red-600" data-target="admin"><i class="fa fa-cog"></i> 後台管理</button>`;
+                }
+                
+                document.getElementById('adminPanelTitle').innerText = curUser.role === 'admin' ? "最高家族管理後台 (總部)" : `家族廳務後台 (${curUser.hall})`;
+                document.getElementById('adminBadge').innerText = curUser.role === 'admin' ? "最高權限已載入" : "廳長權限已載入";
+                
+                // 【權限收緊】只有最高管理員 admin 才能看到並使用導出報表功能
+                if (curUser.role === 'admin') {
+                    document.getElementById('adminExportContainer').classList.remove('hidden');
+                    const exStart = document.getElementById('exportStartDate'); const exEnd = document.getElementById('exportEndDate'); if(exStart && !exStart.value){ const d=new Date(); d.setDate(d.getDate()-30); exStart.value=d.toISOString().slice(0,10); } if(exEnd && !exEnd.value){ exEnd.value=new Date().toISOString().slice(0,10); }
+                } else {
+                    document.getElementById('adminExportContainer').classList.add('hidden');
+                }
+                
+                bindNavEvents(); 
+                loadAdminData(); loadUserList();  
+            }
+            initDateRange();
+            bindPrivateChatListener();
+            bindLogsRealtimeListener(); 
+            renderLocalLogsView();
+            checkTime();
+            setInterval(checkTime, 5000);
+        }
+
+        window.logout = () => {
+            curUser = null;
+            document.getElementById('loginAcc').value = "";
+            document.getElementById('loginPwd').value = "";
+            document.getElementById('mainPage').classList.add('hidden');
+            document.getElementById('authPage').classList.remove('hidden');
+            const privateModal = document.getElementById('privateLoginModal'); if(privateModal) privateModal.classList.add('hidden');
+            
+            const nav = document.getElementById('mainNav');
+            nav.className = "grid grid-cols-3 sm:grid-cols-6 bg-white rounded-2xl shadow-sm mb-4 p-1 border text-xs gap-1 text-center";
+            const adminBtn = document.getElementById('adminNavBtn');
+            if(adminBtn) adminBtn.remove();
+            
+            alert('已成功登出系統');
+        };
+
+        window.previewImage = (inputId, displayId) => {
+            const file = document.getElementById(inputId).files[0];
+            if(file) document.getElementById(displayId).innerText = "已選取：" + file.name;
+        };
+
+        function saveToLocalHistory(type, isImg = false) {
+            try {
+                const logs = JSON.parse(localStorage.getItem('jinho_local_logs')) || [];
+                logs.unshift({
+                    time: new Date().toLocaleString('zh-TW', {hour12:false}),
+                    type: type,
+                    status: isImg ? "圖片已同步至雲端庫並儲存在本機" : "文字數據已送審/寫入"
+                });
+                localStorage.setItem('jinho_local_logs', JSON.stringify(logs.slice(0, 50)));
+                renderLocalLogsView();
+            } catch(e) { console.error(e); }
+        }
+
+        function renderLocalLogsView() {
+            const container = document.getElementById('localLogsList');
+            if(!container) return;
+            const logs = JSON.parse(localStorage.getItem('jinho_local_logs')) || [];
+            container.innerHTML = logs.map(l => `<div class="p-2 bg-gray-50 border rounded-lg"><b>[${l.time}]</b> ${l.type} - <span class="text-green-600">${l.status}</span></div>`).join('') || "<p class='text-gray-400 text-center py-2'>本機尚無提交留存紀錄</p>";
+        }
+
+        window.handleDailyCheckin = async (checkinType) => {
+            const file = document.getElementById("imgInput").files[0];
+            if(!file) return alert("請先選取打卡圖片");
+
+            const container = document.getElementById('checkinBtnContainer');
+            container.innerHTML = `<button class="w-full disabled-btn text-white py-4 rounded-xl font-bold shadow-md" disabled><i class="fa fa-spinner fa-spin"></i> 正在安全同步並檢測重複紀錄...</button>`;
+
+            try {
+                const snapshot = await db.ref('attendance_records')
+                    .orderByChild('user')
+                    .equalTo(curUser.acc)
+                    .limitToLast(5)
+                    .once('value');
+                    
+                let isTooFrequent = false;
+                snapshot.forEach(child => {
+                    const rec = child.val();
+                    if (rec.type === checkinType && (Date.now() - rec.timestamp) < 60000) {
+                        isTooFrequent = true;
+                    }
+                });
+
+                if (isTooFrequent) {
+                    alert("⚠️ 系統偵測到您在 1 分鐘內已有相同的打卡紀錄，已自動攔截重複提交！");
+                    checkTime();
+                    return;
+                }
+
+                const imageUrl = await uploadToCloudinary(file);
+                await sendRecord(checkinType, imageUrl);
+                saveToLocalHistory(checkinType, true);
+
+                document.getElementById("imgInput").value = "";
+                document.getElementById("fileNameDisplay").innerText = "點擊選取、拖曳或拍攝日常打卡截圖";
+                alert("🎉 打卡成功");
+            } catch(err) {
+                console.error(err);
+                alert("打卡失敗，請檢查網路後重試");
+            } finally {
+                checkTime();
+            }
+        };            
+
+        window.handleImageCheckinGeneric = async (subType, inputId, logTypeName) => {
+            const file = document.getElementById(inputId).files[0];
+            if(!file) return alert("請先選擇圖片");
+
+            try {
+                const imageUrl = await uploadToCloudinary(file);
+                await sendRecord(subType, imageUrl);
+                saveToLocalHistory(logTypeName, true);
+
+                document.getElementById(inputId).value = "";
+                document.getElementById("wingFileName").innerText = "點擊選取或拍攝翅膀收禮截圖";
+                alert("回報成功");
+            } catch(err) {
+                console.error(err);
+                alert("圖片上傳失敗");
+            }
+        };
+
+        window.sendRecord = (type, detail, customTimeStr = null) => {
+            const targetTimeStr = customTimeStr ? customTimeStr : new Date().toLocaleString('zh-TW', {hour12:false});
+            return db.ref('attendance_records').push({
+                user: curUser.acc, 
+                nick: curUser.nick, 
+                hall: curUser.hall, 
+                type: type, 
+                detail: detail,
+                timestamp: Date.now(),
+                time: targetTimeStr
+            });
+        };
+
+        window.submitWingReport = () => {
+            const wType = document.querySelector('input[name="wingType"]:checked').value;
+            const wPeriod = document.querySelector('input[name="wingPeriod"]:checked').value;
+            
+            const detailText = `【翅膀回報】[${wPeriod}] 禮物級別：${wType}`;
+            handleImageCheckinGeneric(detailText, 'wingImgInput', `翅膀回報(${wPeriod}-${wType})`);
+        };
+
+        function updateTimeOptions() {
+            const selectedDate = document.getElementById('dateInput').value; 
+            if(!selectedDate) return;
+
+            const now = new Date();
+            const formatDate = (d) => d.toLocaleDateString('zh-TW', {year:'numeric',month:'2-digit',day:'2-digit'}).replace(/\//g,'-');
+            const todayStr = formatDate(now);
+            const currentHour = now.getHours();
+            const scheduleCount = {};
+            
+            if(document.getElementById('scheduleLimitHint')) {
+                document.getElementById('scheduleLimitHint').innerText = curUser.role === 'admin' ? "(提示: 後台檢視模式/人數獨立計算)" : "(每廳每時段限5人)";
+            }
+
+            globalRecordsForOptions.forEach(r => {
+                if(r.type === '預約排班' && r.detail) {
+                    const rawDetail = r.detail.trim();
+                    const parts = rawDetail.split(' ');
+                    if (parts.length >= 2) {
+                        const recDate = parts[0]; 
+                        const recSlot = parts[1] + " " + parts[2] + " " + parts[3]; 
+                        
+                        const isHallMatch = curUser.role === 'admin' || r.hall === curUser.hall;
+                        if (recDate === selectedDate && isHallMatch) {
+                            const cleanSlot = recSlot.split('(')[0].trim();
+                            const keyName = curUser.role === 'admin' ? `${cleanSlot}_[${r.hall||'金好野'}]` : cleanSlot;
+                            scheduleCount[keyName] = (scheduleCount[keyName] || 0) + 1;
+                        }
+                    }
+                }
+            });
+
+            const sel = document.getElementById('timeInput');
+            const prevSelectedValue = sel.value; 
+            sel.innerHTML = "";
+            
+            for(let i=0; i<24; i++){
+                let h = i < 10 ? '0'+i : i; let nH = (i+1)%24; nH = nH < 10 ? '0'+nH : nH;
+                let slot = `${h}:00 - ${nH}:00`; 
+                
+                if (selectedDate === todayStr && i <= currentHour) {
+                    sel.innerHTML += `<option value="${slot}" disabled class="text-gray-400">${slot} (❌ 已過時段)</option>`;
+                } else if(curUser.role === 'admin') {
+                    let countYe = scheduleCount[`${slot}_[金好野]`] || 0;
+                    let countMing = scheduleCount[`${slot}_[金好命]`] || 0;
+                    sel.innerHTML += `<option value="${slot}">【管理】${slot} (野: ${countYe}/5 | 命: ${countMing}/5)</option>`;
+                } else {
+                    let count = scheduleCount[slot] || 0;
+                    if(count >= 5) {
+                        sel.innerHTML += `<option value="${slot}" disabled class="text-red-400">${slot} (❌ 已額滿 5/5)</option>`;
+                    } else {
+                        sel.innerHTML += `<option value="${slot}">${slot} (👤 目前 ${count}/5 人)</option>`;
+                    }
+                }
+            }
+            if(prevSelectedValue) sel.value = prevSelectedValue; 
+
+            let myTodayHtml = "";
+            globalRecordsForOptions.forEach(r => {
+                if(r.type === '預約排班' && r.detail) {
+                    const rawDetail = r.detail.trim();
+                    const parts = rawDetail.split(' ');
+                    if (parts.length >= 2 && parts[0] === selectedDate) {
+                        const cleanSlot = (parts[1] + " " + parts[2] + " " + parts[3]).split('(')[0].trim();
+                        const shouldShow = curUser.role === 'admin' || r.user === curUser.acc;
+                        
+                        if(shouldShow) {
+                            const showLabel = curUser.role === 'admin' ? `<b>[${r.hall||'金好野'}] ${r.nick}</b>: ${cleanSlot}` : `<span><i class="fa fa-clock-o text-blue-500"></i> ${cleanSlot}</span>`;
+                            const btnText = curUser.role === 'admin' ? "除名排班" : "取消";
+                            myTodayHtml += `<div class="flex justify-between items-center bg-blue-50 p-3 rounded-xl border border-blue-100 text-xs font-bold text-gray-700">
+                                ${showLabel}
+                                <button onclick="cancelSchedule('${r.key}')" class="text-red-500 border border-red-200 px-3 py-1 rounded-lg bg-white active:bg-red-50 shadow-sm font-bold">${btnText}</button>
+                            </div>`;
+                        }
+                    }
+                }
+            });
+            document.getElementById('myTodayScheduleList').innerHTML = myTodayHtml || `<p class="text-gray-400 text-center col-span-full py-2 text-xs">當天尚未安排 any 排班數據</p>`;
+        }
+
+        window.submitSchedule = () => {
+            if(curUser.role === 'admin') return alert('最高管理員帳號僅供後台管理，請勿使用 admin 帳號進行排班。如需測試排班請另行註冊一般主播帳號。');
+            const d = document.getElementById('dateInput').value;
+            let t = document.getElementById('timeInput').value;
+            if(!d || !t) return alert('請選擇日期與時段');
+            if(t.includes('已額滿')) return alert('該時段已額滿');
+            if(t.includes('已過時段')) return alert('該時段已過！');
+
+            t = t.split('(')[0].trim();
+            const inputDate = new Date(d + "T00:00:00");
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            
+            const diffDays = Math.ceil((inputDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+            if (diffDays < 0 || diffDays > 2) {
+                alert("🚨 系統阻斷：本系統僅開放預約「今天、明天、後天」這3天內的時段！");
+                initDateRange(); return;
+            }
+
+            const targetDetail = `${d} ${t}`;
+            let isDuplicated = false;
+            globalRecordsForOptions.forEach(r => {
+                if(r.user === curUser.acc && r.type === '預約排班') {
+                    if(r.detail.split('(')[0].trim() === targetDetail) isDuplicated = true;
+                }
+            });
+
+            if(isDuplicated) alert(`🚨 提示：您已經登記過此時段了！`);
+            else sendRecord('預約排班', targetDetail).then(() => {
+                saveToLocalHistory(`預約排班(${targetDetail})`, false);
+                alert('成功送出！');
+            });
+        };
+
+        window.cancelSchedule = (key) => {
+            const confirmMsg = curUser.role === 'admin' ? '確定要強行刪除該名成員的排班嗎？' : '確定要取消這個時段的排班嗎？';
+            if(confirm(confirmMsg)) {
+                db.ref('attendance_records/' + key).remove().then(() => { alert('已成功移除排班'); });
+            }
+        };
+
+        window.adminDeleteRecord = (key, nick) => {
+            if(confirm(`⚠️ 廳長最高權限確認：\n確定要永久刪除「${nick}」的這筆資料庫回報紀錄嗎？`)) {
+                db.ref('attendance_records/' + key).remove().then(() => {
+                    alert('該筆紀錄已成功自系統中剔除！');
+                });
+            }
+        };
+
+        window.clearAdminFilters = () => {
+            document.getElementById('adminSearchKeyword').value = "";
+            document.getElementById('adminSearchDate').value = "";
+            resetAdminPagination();
+        };
+
+        window.resetAdminPagination = () => {
+            adminCurrentLimit = 20;
+            renderAdminLists();
+        };
+
+        window.loadMoreAdminData = () => {
+            adminCurrentLimit += 20;
+            renderAdminLists();
+        };
+
+        function bindLogsRealtimeListener() {
+            db.ref('attendance_records').orderByChild('timestamp').on('value', snap => {
+                globalRecordsForOptions = [];
+                snap.forEach(c => { 
+                    let v = c.val(); 
+                    v.key = c.key; 
+                    globalRecordsForOptions.push(v); 
+                });
+                updateTimeOptions();
+                renderAdminLists();
+            });
+        }
+
+        let personalHistoryFilter = 'all';
+
+        window.setHistoryFilter = (filter) => {
+            personalHistoryFilter = filter;
+            ['All','Checkin','Wing','Private'].forEach(x => {
+                const el = document.getElementById('historyFilter' + x); if (!el) return;
+                const active = (filter === 'all' && x === 'All') || (filter === 'checkin' && x === 'Checkin') || (filter === 'wing' && x === 'Wing') || (filter === 'private' && x === 'Private');
+                el.className = active ? 'history-filter-btn flex-1 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold' : 'history-filter-btn flex-1 py-2 rounded-xl bg-gray-100 text-gray-500 text-xs font-bold';
+            });
+            renderAdminLists();
+        };
+
+        function renderAdminLists() {
+            if (!curUser || !db) return;
+            const keyword = document.getElementById('adminSearchKeyword') ? document.getElementById('adminSearchKeyword').value.trim().toLowerCase() : "";
+            const searchDate = document.getElementById('adminSearchDate') ? document.getElementById('adminSearchDate').value : "";
+
+            let p = ""; let a = ""; 
+            let personalCount = 0; 
+            let adminMatchCount = 0; 
+            let renderedCount = 0;   
+            
+            const list = [...globalRecordsForOptions];
+            const reversedList = list.reverse();
+
+            reversedList.forEach(r => {
+                const isImg = r.detail && (r.detail.startsWith('data:image') || r.detail.startsWith('https://res.cloudinary.com'));
+                const cleanShowDetail = (r.type === '預約排班') ? r.detail.split('(')[0].trim() : r.detail;
+                
+                let personalDisplay = isImg ? `<img src="${r.detail}" class="record-img mx-auto" loading="lazy" decoding="async" onclick="window.open(this.src)">` : `<div class="bg-gray-50 p-2 rounded text-gray-500 font-bold">${cleanShowDetail}</div>`;
+                
+                let typeTagClass = "text-gray-400";
+                if (r.type.includes("上班")) typeTagClass = "text-green-600 font-extrabold";
+                if (r.type.includes("下班")) typeTagClass = "text-orange-600 font-extrabold";
+                if (r.type === "預約排班") typeTagClass = "text-blue-600";
+                if (r.type.includes("翅膀")) typeTagClass = "text-purple-600 font-bold";
+
+                const personalCard = `<div class="p-4 bg-white rounded-2xl shadow-sm mb-1 border border-gray-100 text-[11px]">
+                    <div class="flex justify-between items-center mb-1"><span class="font-bold text-blue-600">${r.nick}</span><span class="text-gray-300 font-normal">${r.time}</span></div>
+                    <div class="${typeTagClass} mb-2 font-bold">${r.type}</div>${personalDisplay}
+                </div>`;
+                
+                if(r.user === curUser.acc) {
+                    const isCheckinRecord = r.type && (r.type.includes('上班打卡') || r.type.includes('下班打卡'));
+                    const isWingRecord = r.type && r.type.includes('翅膀');
+                    const passHistoryFilter = personalHistoryFilter === 'all' || (personalHistoryFilter === 'checkin' && isCheckinRecord) || (personalHistoryFilter === 'wing' && isWingRecord);
+                    if (passHistoryFilter && personalCount < 30) { p += personalCard; personalCount++; }
+                }
+
+                if (curUser.role === 'sub_admin' && r.hall !== curUser.hall) return;
+
+                let isMatch = true;
+                if (keyword) {
+                    const nickMatch = r.nick && r.nick.toLowerCase().includes(keyword);
+                    const accMatch = r.user && r.user.toLowerCase().includes(keyword);
+                    const typeMatch = r.type && r.type.toLowerCase().includes(keyword);
+                    const hallMatch = r.hall && r.hall.toLowerCase().includes(keyword);
+                    const detailMatch = r.detail && r.detail.toLowerCase().includes(keyword);
+                    if (!nickMatch && !accMatch && !typeMatch && !hallMatch && !detailMatch) isMatch = false;
+                }
+                if (searchDate) {
+                    const formattedSearchDate = searchDate.replace(/-/g, '/');
+                    if (!r.time || !r.time.includes(formattedSearchDate)) isMatch = false;
+                }
+
+                if (isMatch) {
+                    adminMatchCount++; 
+
+                    if (renderedCount < adminCurrentLimit) {
+                        let adminDisplay = "";
+                        if (isImg) {
+                            if (r.type.includes("翅膀")) {
+                                adminDisplay = `<img src="${r.detail}" class="record-img mx-auto" loading="lazy" decoding="async" onclick="window.open(this.src)">`;
+                            } else {
+                                adminDisplay = `<div class="bg-gray-100 p-3 rounded-xl text-gray-400 font-medium text-center"><i class="fa fa-eye-slash"></i> 系統已隱藏日常打卡圖（文字記錄正常留存）</div>`;
+                            }
+                        } else {
+                            adminDisplay = `<div class="bg-gray-50 p-2 rounded text-gray-500 font-bold">${cleanShowDetail}</div>`;
+                        }
+
+                        // 【權限收緊】只有最高管理員 admin 才能看到並執行刪除按鈕
+                        const deleteBtnHtml = curUser.role === 'admin' ? `<button onclick="adminDeleteRecord('${r.key}', '${r.nick}')" class="text-[10px] bg-red-50 text-red-600 border border-red-200 px-2 py-0.5 rounded font-bold hover:bg-red-100 transition">刪除</button>` : '';
+
+                        const adminCard = `<div class="p-4 bg-white rounded-2xl shadow-sm border border-gray-100 text-[11px]">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="font-bold text-gray-700">${r.nick} (${r.user}) <span class="bg-blue-50 text-blue-600 px-1 rounded text-[9px]">${r.hall || '金好野'}</span></span>
+                                <span class="text-gray-300 font-normal">${r.time}</span>
+                            </div>
+                            <div class="flex justify-between items-center mt-1">
+                                <span class="${typeTagClass}">${r.type}</span>
+                                ${deleteBtnHtml}
+                            </div>
+                            <div class="mt-2">${adminDisplay}</div>
+                        </div>`;
+                        
+                        a += adminCard;
+                        renderedCount++;
+                    }
+                }
+            });
+
+            if (personalHistoryFilter === 'private' || personalHistoryFilter === 'all') {
+                const privateList = globalPrivateChatRecords.filter(r => r.user === curUser.acc).slice().sort((a,b) => (b.timestamp||0)-(a.timestamp||0));
+                privateList.forEach(r => {
+                    if (personalCount >= 30) return;
+                    const statusText = r.status === 'effective' ? '有效回覆' : (r.status === 'replied' ? '一般回覆' : '已私訊');
+                    const statusClass = r.status === 'effective' ? 'text-green-600 bg-green-50' : (r.status === 'replied' ? 'text-blue-600 bg-blue-50' : 'text-gray-600 bg-gray-50');
+                    p += `<div class="p-4 bg-white rounded-2xl shadow-sm mb-1 border border-red-100 text-[11px]"><div class="flex justify-between items-center mb-1"><span class="font-bold text-red-600">${r.nick || curUser.nick}</span><span class="text-gray-300 font-normal">${r.date||''} ${r.time||''}</span></div><div class="text-red-600 font-bold mb-2">私聊開發</div><div class="${statusClass} p-2 rounded font-bold">${statusText}｜對象：${r.target || '未填寫'}</div>${r.note ? `<div class="text-gray-400 mt-2">備註：${r.note}</div>` : ''}</div>`;
+                    personalCount++;
+                });
+            }
+
+            if(document.getElementById('personalList')) document.getElementById('personalList').innerHTML = p || "<p class='col-span-full text-center text-gray-400 py-4'>目前無紀錄</p>";
+            if(document.getElementById('adminAllList')) document.getElementById('adminAllList').innerHTML = a || "<p class='col-span-full text-center text-gray-400 py-4'>找不到符合篩選條件的數據</p>";
+            if(document.getElementById('adminMatchCount')) document.getElementById('adminMatchCount').innerText = adminMatchCount;
+
+            const loadMoreBtn = document.getElementById('loadMoreAdminBtn');
+            if (loadMoreBtn) {
+                if (adminMatchCount <= adminCurrentLimit) {
+                    loadMoreBtn.innerText = "已加載全體完畢";
+                    loadMoreBtn.disabled = true;
+                    loadMoreBtn.classList.add('disabled-btn');
+                } else {
+                    loadMoreBtn.innerText = `載入後續 20 筆數據 (目前已看 ${renderedCount}/${adminMatchCount})`;
+                    loadMoreBtn.disabled = false;
+                    loadMoreBtn.classList.remove('disabled-btn');
+                }
+            }
+        }
+
+        window.exportToExcel = async () => {
+            if (curUser.role !== 'admin') return alert('您的權限不足，無法執行資料導出操作！');
+            if(!db) return alert('資料庫未連線');
+            const startDate = document.getElementById('exportStartDate')?.value;
+            const endDate = document.getElementById('exportEndDate')?.value;
+            const exportType = document.getElementById('exportType')?.value || 'all';
+            if(!startDate || !endDate) return alert('請先選擇匯出開始日期與結束日期');
+            if(startDate > endDate) return alert('開始日期不能晚於結束日期');
+            const startTime = new Date(startDate + 'T00:00:00').getTime();
+            const endTime = new Date(endDate + 'T23:59:59.999').getTime();
+            alert('系統正在整理指定區間資料，請稍候...');
+            try {
+                const attendanceSnap = await db.ref('attendance_records').orderByChild('timestamp').startAt(startTime).endAt(endTime).once('value');
+                const data=[];
+                attendanceSnap.forEach(c=>{ const r=c.val(); const isCheckin=r.type&&(r.type.includes('上班打卡')||r.type.includes('下班打卡')); const isWing=r.type&&r.type.includes('翅膀'); const isSchedule=r.type==='預約排班'; const pass=exportType==='all'||(exportType==='checkin'&&isCheckin)||(exportType==='wing'&&isWing)||(exportType==='schedule'&&isSchedule); if(pass){const t=r.time?r.time.split(' '):['未知','未知']; data.push({'隸屬廳別':r.hall||'金好野','成員暱稱':r.nick,'成員帳號':r.user,'動作日期':t[0],'動作時間':t[1],'回報項目':r.type,'詳細文字內容':r.type==='預約排班'?(r.detail||'').split('(')[0].trim():((r.detail||'').startsWith('http')?'（圖片回報，請至系統查看）':r.detail)});}});
+                if(exportType==='all'||exportType==='private'){ const privateSnap=await db.ref('private_chat_reports').orderByChild('timestamp').startAt(startTime).endAt(endTime).once('value'); privateSnap.forEach(c=>{const r=c.val(); data.push({'隸屬廳別':r.hall||'金好野','成員暱稱':r.nick,'成員帳號':r.user,'動作日期':r.date||'','動作時間':r.time||'','回報項目':'私聊開發','詳細文字內容':`${r.status==='effective'?'有效回覆':r.status==='replied'?'一般回覆':'已私訊'}｜對象：${r.target||''}${r.note?'｜備註：'+r.note:''}`});}); }
+                if(data.length===0) return alert('指定日期區間與匯出類型沒有任何資料');
+                data.sort((a,b)=>`${b['動作日期']} ${b['動作時間']}`.localeCompare(`${a['動作日期']} ${a['動作時間']}`));
+                const ws=XLSX.utils.json_to_sheet(data); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'報表'); XLSX.writeFile(wb,`金好家族報表_${exportType}_${startDate}_${endDate}.xlsx`); alert('🎉 報表已成功導出！');
+            } catch(err) { console.error(err); alert('報表匯出失敗，請稍後再試。'); }
+        };
+
+        function loadUserList() {
+            db.ref('users').on('value', snap => {
+                let h = ""; let count = 0;
+                snap.forEach(c => {
+                    const u = c.val(); if(u.acc === 'admin') return; 
+                    
+                    if(curUser.role === 'sub_admin' && u.hall !== curUser.hall) return;
+                    count++;
+                    
+                    const isHighestAdmin = curUser.role === 'admin';
+                    
+                    h += `<div class="bg-white p-3 rounded-xl border mb-2 text-xs space-y-2 shadow-sm">
+                        <div class="flex justify-between items-center">
+                            <span><b>${u.nick}</b> (${u.acc}) <span class="bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded text-[10px] font-bold">${u.hall || '金好野'}</span></span>
+                            ${isHighestAdmin ? `<button onclick="deleteUser('${u.acc}')" class="text-red-500 border border-red-200 px-2 py-0.5 rounded text-[11px]">除名</button>` : ''}
+                        </div>
+                        
+                        ${isHighestAdmin ? `
+                        <div class="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-gray-100">
+                            <div>
+                                <label class="text-[10px] text-gray-400 block mb-0.5">權限配置</label>
+                                <select onchange="updateUserRole('${u.acc}', this.value)" class="w-full p-1 border rounded bg-gray-50 text-[11px]">
+                                    <option value="user" ${u.role==='user'?'selected':''}>一般主播</option>
+                                    <option value="sub_admin" ${u.role==='sub_admin'?'selected':''}>次級廳長</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-gray-400 block mb-0.5">廳別匹配</label>
+                                <select onchange="updateUserHall('${u.acc}', this.value)" class="w-full p-1 border rounded bg-gray-50 text-[11px]">
+                                    <option value="金好野" ${u.hall==='金好野'?'selected':''}>金好野</option>
+                                    <option value="金好命" ${u.hall==='金好命'?'selected':''}>金好命</option>
+                                </select>
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        <div class="text-right pt-1">
+                            <button onclick="adminResetPassword('${u.acc}', '${u.nick}')" class="text-blue-600 bg-blue-50 border border-blue-200 px-3 py-0.5 rounded text-[11px] font-bold">重設密碼</button>
+                        </div>
+                    </div>`;
+                });
+                document.getElementById('userList').innerHTML = h || "<p class='text-gray-400 text-center py-2 text-xs w-full'>目前本廳尚無核准成員</p>";
+                document.getElementById('userCount').innerText = count;
+            });
+        }
+
+        window.updateUserRole = (acc, role) => {
+            db.ref(`users/${acc}/role`).set(role).then(() => alert('權限指派成功！'));
+        };
+
+        window.updateUserHall = (acc, hall) => {
+            db.ref(`users/${acc}/hall`).set(hall).then(() => alert(`已將該主播成功匹配至：${hall}`));
+        };
+
+        window.adminResetPassword = (acc, nick) => {
+            const newPwd = prompt(`請輸入要幫「${nick}」設定的新密碼：`);
+            if (newPwd === null) return; 
+            const trimmedPwd = newPwd.trim();
+            if (!trimmedPwd) return alert('密碼不能留空！');
+            db.ref(`users/${acc}/pwd`).set(trimmedPwd).then(() => { alert(`重設成功！已改為 ${trimmedPwd}`); });
+        };
+
+        window.deleteUser = (acc) => { if(confirm(`確定除名 ${acc}？`)) db.ref('users/'+acc).remove(); };
+        
+        function loadAdminData() {
+            db.ref('pending_users').on('value', snap => {
+                let h = "";
+                snap.forEach(c => {
+                    const u = c.val();
+                    if(curUser.role === 'sub_admin' && u.hall !== curUser.hall) return;
+
+                    h += `<div class="p-4 bg-red-50 rounded-2xl flex justify-between items-center text-xs mb-3 shadow-sm">
+                        <span><b>${u.nick}</b> (${u.acc})</span>
+                        <button onclick="approve('${u.acc}')" class="bg-red-500 text-white px-4 py-2 rounded-xl font-bold">准許</button>
+                    </div>`;
+                });
+                document.getElementById('pendingList').innerHTML = h || "<p class='text-gray-400 text-center py-2 text-xs w-full'>目前無申請</p>";
+            });
+        }
+
+        window.approve = (acc) => {
+            db.ref('pending_users/'+acc).once('value', snap => {
+                const uData = snap.val();
+                uData.hall = curUser.role === 'sub_admin' ? curUser.hall : '金好野'; 
+                db.ref('users/'+acc).set(uData).then(() => db.ref('pending_users/'+acc).remove());
+            });
+        };
+
+        window.doUpdateName = () => {
+            const n = document.getElementById('newNick').value.trim();
+            if(!n) return alert('暱稱不能為空！');
+            if(curUser.acc !== 'admin') {
+                db.ref('users/'+curUser.acc+'/nick').set(n).then(() => {
+                    alert('暱稱修改成功，頁面即將重新整理！');
+                    location.reload();
+                });
+            }
+        };
+
+        function getTodayKey(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+
+        function showPrivateLoginModal(outreach,effective){
+            if(!curUser || curUser.role==='admin' || curUser.role==='sub_admin') return;
+            const complete=outreach>=10&&effective>=5;
+            const modal=document.getElementById('privateLoginModal'); if(!modal) return;
+            if(complete){ modal.classList.add('hidden'); return; }
+            document.getElementById('privateLoginModalProgress').innerText=`私訊開發 ${Math.min(outreach,10)}/10　｜　有效回覆 ${Math.min(effective,5)}/5`;
+            document.getElementById('privateLoginModalOutreach').innerText=`${Math.min(outreach,10)}/10`;
+            document.getElementById('privateLoginModalEffective').innerText=`${Math.min(effective,5)}/5`;
+            document.getElementById('privateLoginModalNeed').innerText=`今天還需要：私訊 ${Math.max(0,10-outreach)} 次、有效回覆 ${Math.max(0,5-effective)} 筆`;
+            modal.classList.remove('hidden');
+        }
+        window.goFromPrivateLoginModal=()=>{ const modal=document.getElementById('privateLoginModal'); if(modal)modal.classList.add('hidden'); window.openPrivateChatTask(); };
+
+        function renderPrivateTaskUI(){
+            if(!curUser) return;
+            if(curUser.role==='admin' || curUser.role==='sub_admin'){ const alertBox=document.getElementById('privateTaskAlert'); if(alertBox) alertBox.classList.add('hidden'); return; }
+            const today=getTodayKey(); const mine=globalPrivateChatRecords.filter(r=>r.user===curUser.acc&&r.date===today);
+            const seen=new Set(), unique=[]; mine.forEach(r=>{const k=(r.target||'').trim().toLowerCase(); if(k&&!seen.has(k)){seen.add(k); unique.push(r);}});
+            const outreach=unique.length, effective=unique.filter(r=>r.status==='effective').length, complete=outreach>=10&&effective>=5; showPrivateLoginModal(outreach,effective);
+            const op=document.getElementById('privateOutreachProgress'),ep=document.getElementById('privateEffectiveProgress'); if(op)op.innerText=`${Math.min(outreach,10)} / 10`; if(ep)ep.innerText=`${Math.min(effective,5)} / 5`;
+            const ob=document.getElementById('privateOutreachBar'),eb=document.getElementById('privateEffectiveBar'); if(ob)ob.style.width=Math.min(outreach,10)*10+'%'; if(eb)eb.style.width=Math.min(effective,5)*20+'%';
+            const st=document.getElementById('privateTaskStatus'); if(st){st.className=complete?'mb-4 p-3 rounded-xl bg-green-50 text-green-600 text-xs font-bold border border-green-100':'mb-4 p-3 rounded-xl bg-red-50 text-red-600 text-xs font-bold border border-red-100'; st.innerText=complete?'✅ 今日私聊任務已完成！今天不用再回報。':`⚠️ 今日任務尚未完成：還需要 ${Math.max(0,10-outreach)} 次私訊、${Math.max(0,5-effective)} 筆有效回覆。`;}
+            const alertBox=document.getElementById('privateTaskAlert'),alertText=document.getElementById('privateTaskAlertText'); if(alertBox)alertBox.classList.toggle('hidden',complete); if(alertText)alertText.innerText=`私訊開發 ${Math.min(outreach,10)}/10｜有效回覆 ${Math.min(effective,5)}/5`;
+            const dateEl=document.getElementById('privateChatDate'); if(dateEl)dateEl.innerText=today;
+            const list=document.getElementById('privateTodayList'); if(list){const rows=mine.slice().sort((a,b)=>(b.timestamp||0)-(a.timestamp||0)); list.innerHTML=rows.map(r=>{const stx=r.status==='effective'?'有效回覆':r.status==='replied'?'一般回覆':'已私訊'; const cl=r.status==='effective'?'bg-green-50 text-green-600':r.status==='replied'?'bg-blue-50 text-blue-600':'bg-gray-50 text-gray-600'; return `<div class="flex justify-between gap-3 items-center p-3 rounded-xl border bg-white text-xs"><div class="min-w-0"><div class="font-bold">${r.target||''}</div><div class="text-gray-400 mt-1">${r.time||''}${r.note?'｜'+r.note:''}</div></div><span class="${cl} px-2 py-1 rounded-lg font-bold whitespace-nowrap">${stx}</span></div>`;}).join('')||'<p class="text-center text-gray-400 text-xs py-4">尚無今日紀錄</p>';}
+            renderAdminLists();
+        }
+
+        window.openPrivateChatTask=()=>{const btn=document.querySelector('.nav-btn[data-target="privateChatTab"]'); if(btn)btn.click(); window.scrollTo({top:0,behavior:'smooth'});};
+
+        window.submitPrivateChatReport=async()=>{if(!curUser||!db)return; const target=document.getElementById('privateTarget').value.trim(), status=document.getElementById('privateStatus').value, note=document.getElementById('privateNote').value.trim(); if(!target)return alert('請先填寫對象暱稱／識別名稱'); const today=getTodayKey(); const mine=globalPrivateChatRecords.filter(r=>r.user===curUser.acc&&r.date===today); const normalized=target.toLowerCase(); if(mine.some(r=>(r.target||'').trim().toLowerCase()===normalized))return alert('今天已經回報過這個對象，不能重複計算。'); const effective=mine.filter(r=>r.status==='effective').length; if(mine.length>=10&&effective>=5)return alert('今天的私聊任務已經完成，不需要再新增。'); if(status==='effective'&&effective>=5)return alert('今天的有效回覆已達 5 筆，這筆請改選其他尚未完成的項目。'); const now=new Date(); const payload={user:curUser.acc,nick:curUser.nick,hall:curUser.hall,target,status,note,date:today,time:now.toLocaleTimeString('zh-TW',{hour12:false}),timestamp:Date.now()}; try{await db.ref('private_chat_reports').push(payload); document.getElementById('privateTarget').value=''; document.getElementById('privateNote').value=''; alert('已成功記錄這次私聊開發！');}catch(e){console.error(e);alert('回報失敗，請稍後再試。');}};
+
+        function bindPrivateChatListener(){if(!db||!curUser)return; db.ref('private_chat_reports').on('value',snap=>{globalPrivateChatRecords=[]; snap.forEach(c=>{const v=c.val();v.key=c.key;globalPrivateChatRecords.push(v);}); renderPrivateTaskUI(); renderAdminPrivateChatStats();});}
+
+        function renderAdminPrivateChatStats(){const box=document.getElementById('adminPrivateChatStats'); if(!box||!curUser||!db||(curUser.role!=='admin'&&curUser.role!=='sub_admin'))return; db.ref('users').once('value',snap=>{const today=getTodayKey(), users=[]; snap.forEach(c=>{const u=c.val();if(u.acc!=='admin'&&!(curUser.role==='sub_admin'&&u.hall!==curUser.hall))users.push(u);}); box.innerHTML=users.map(u=>{const rows=globalPrivateChatRecords.filter(r=>r.user===u.acc&&r.date===today), targets=new Set(rows.map(r=>(r.target||'').trim().toLowerCase()).filter(Boolean)), outreach=targets.size, effective=new Set(rows.filter(r=>r.status==='effective').map(r=>(r.target||'').trim().toLowerCase())).size, done=outreach>=10&&effective>=5, pct=Math.min(100,Math.round(Math.min(outreach/10,effective/5)*100)); return `<div class="bg-white border rounded-xl p-3"><div class="flex justify-between items-center"><span class="font-bold text-xs">${u.nick}</span><span class="text-[10px] font-bold ${done?'text-green-600':'text-red-500'}">${done?'已完成':'未完成'}</span></div><div class="text-[11px] text-gray-500 mt-1">私訊 ${Math.min(outreach,10)}/10　有效回覆 ${Math.min(effective,5)}/5</div><div class="h-1.5 bg-gray-100 rounded-full mt-2 overflow-hidden"><div class="h-full ${done?'bg-green-500':'bg-red-500'}" style="width:${pct}%"></div></div></div>`;}).join('')||'<p class="text-gray-400 text-center text-xs py-3 col-span-full">目前沒有成員</p>';});}
+
+        function bindNavEvents() {
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.onclick = () => {
+                    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    document.getElementById(btn.dataset.target).classList.add('active');
+                };
+            });
+        }
+        bindNavEvents();
+    </script>
+</body>
+</html>        #loadMoreAdminBtn:hover { background-color: #dc2626; }
         #loadMoreAdminBtn:disabled { background-color: #e5e7eb; color: #9ca3af; cursor: not-allowed; }
     </style>
 </head>

@@ -6,6 +6,7 @@
     <title>金好家族管理系統</title>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-messaging-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
@@ -32,6 +33,8 @@
         .scroll-container { -webkit-overflow-scrolling: touch; will-change: transform; }
         .disabled-btn { background-color: #d1d5db !important; cursor: not-allowed !important; color: #9ca3af !important; }
         body { -webkit-tap-highlight-color: transparent; }
+        #fcmToast { position: fixed; right: 16px; bottom: 16px; z-index: 20000; max-width: min(380px, calc(100vw - 32px)); }
+        .fcm-toast-card { background: rgba(17,24,39,.96); color:#fff; border-radius:16px; padding:14px 16px; box-shadow:0 12px 35px rgba(0,0,0,.28); border:1px solid rgba(255,255,255,.12); }
         .loading-text { color: #9ca3af; font-size: 13px; text-align: center; padding: 30px 0; font-weight: bold; width: 100%; }
         #loadMoreAdminBtn { display: block; width: 100%; padding: 12px; background-color: #ef4444; color: white; font-weight: bold; border-radius: 12px; text-align: center; margin-top: 15px; cursor: pointer; transition: background 0.2s; }
         #loadMoreAdminBtn:hover { background-color: #dc2626; }
@@ -96,13 +99,15 @@
             </div>
         </div>
 
+        <div id="fcmToast" class="hidden"><div class="fcm-toast-card"><div id="fcmToastTitle" class="font-black text-sm"></div><div id="fcmToastBody" class="text-xs text-gray-200 mt-1"></div></div></div>
+
         <div id="mainPage" class="hidden">
-            <div id="privateTaskAlert" class="hidden fixed top-3 left-1/2 -translate-x-1/2 z-[9999] w-[calc(100%-24px)] max-w-2xl">
-                <div class="bg-red-600 text-white rounded-2xl shadow-2xl border-2 border-red-300 p-3 sm:p-4">
+            <div id="privateTaskAlert" class="hidden fixed top-3 right-3 z-[9999] w-auto max-w-[230px]">
+                <div class="bg-red-600 text-white rounded-xl shadow-xl border border-red-300 p-2.5">
                     <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-xl flex-shrink-0"><i class="fa fa-bell"></i></div>
-                        <div class="flex-1 min-w-0"><div class="font-black text-sm sm:text-base">⚠️ 今日私聊任務尚未完成</div><div id="privateTaskAlertText" class="text-xs sm:text-sm mt-1 font-bold">私訊開發 0/10｜有效回覆 0/5</div></div>
-                        <button onclick="openPrivateChatTask()" class="bg-white text-red-600 px-3 py-2 rounded-xl text-xs font-black shadow">立即完成</button>
+                        <div class="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-sm flex-shrink-0"><i class="fa fa-bell"></i></div>
+                        <div class="flex-1 min-w-0"><div class="font-black text-xs">⚠️ 今日私聊任務尚未完成</div><div id="privateTaskAlertText" class="text-[10px] mt-0.5 font-bold">私訊開發 0/10｜有效回覆 0/5</div></div>
+                        <button onclick="openPrivateChatTask()" class="bg-white text-red-600 px-2 py-1.5 rounded-lg text-[10px] font-black shadow">立即完成</button>
                     </div>
                 </div>
             </div>
@@ -117,6 +122,7 @@
                 <button class="py-3 rounded-xl font-bold nav-btn" data-target="wingTab">翅膀回報</button>
                 <button class="py-3 rounded-xl font-bold nav-btn" data-target="privateChatTab">私聊開發</button>
                 <button class="py-3 rounded-xl font-bold nav-btn" data-target="history">歷程紀錄</button>
+                <button class="py-3 rounded-xl font-bold nav-btn" data-target="announcements">📢 公告</button>
                 <button class="py-3 rounded-xl font-bold nav-btn" data-target="profile">個人中心</button>
             </nav>
 
@@ -188,6 +194,55 @@
                 <div class="border-t mt-6 pt-4"><h4 class="font-bold text-sm text-gray-700 mb-3">今日已回報紀錄</h4><div id="privateTodayList" class="space-y-2 max-h-80 overflow-y-auto scroll-container"><p class="text-center text-gray-400 text-xs py-4">尚無今日紀錄</p></div></div>
             </section>
 
+            <section id="announcements" class="tab-content bg-white p-5 rounded-2xl border min-h-[300px]">
+                <div class="flex justify-between items-center mb-5">
+                    <div><h3 class="font-bold text-blue-600 text-lg">📢 公告</h3><p class="text-[11px] text-gray-400 mt-1">查看家族公告；管理員也可直接在這裡發布通知</p></div>
+                    <button onclick="loadAnnouncements()" class="text-xs bg-gray-100 text-gray-500 px-3 py-2 rounded-xl font-bold">重新整理</button>
+                </div>
+
+                <div id="announcementAdminComposer" class="hidden mb-6 bg-blue-50 border border-blue-200 rounded-2xl p-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <div><h4 class="font-black text-blue-700"><i class="fa fa-paper-plane"></i> 發布公告</h4><p class="text-[10px] text-blue-400 mt-1">發布後會同步建立推播，並顯示在主播的公告頁</p></div>
+                        <span class="text-[10px] font-bold text-blue-400">FCM Web Push</span>
+                    </div>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-500 mb-1">發送對象</label>
+                            <select id="pushAudience" class="w-full p-3 border rounded-xl text-sm bg-white" onchange="togglePushMemberSelect()"></select>
+                        </div>
+                        <div id="pushMemberWrap" class="hidden">
+                            <label class="block text-[11px] font-bold text-gray-500 mb-1">指定主播（可多選）</label>
+                            <button type="button" onclick="toggleMobileMemberPicker()" class="w-full min-h-[48px] p-3 border rounded-xl text-sm bg-white text-left flex justify-between items-center">
+                                <span id="pushMemberSummary" class="text-gray-500">點這裡選擇主播</span><i class="fa fa-chevron-down text-gray-400"></i>
+                            </button>
+                            <div id="pushMemberPicker" class="hidden mt-2 bg-white border rounded-xl p-2 max-h-64 overflow-y-auto"></div>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-500 mb-1">公告標題</label>
+                            <input id="pushTitle" maxlength="80" class="w-full p-3 border rounded-xl text-sm bg-white" placeholder="例如：📢 金好家族公告">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-500 mb-1">公告內容</label>
+                            <textarea id="pushBody" maxlength="500" rows="5" class="w-full p-3 border rounded-xl text-sm bg-white resize-none" placeholder="輸入要通知主播的內容"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-gray-500 mb-1">發送時間</label>
+                            <select id="pushSendMode" class="w-full p-3 border rounded-xl text-sm bg-white" onchange="togglePushSchedule()">
+                                <option value="now">立即發送</option><option value="schedule">排程發送</option>
+                            </select>
+                        </div>
+                        <div id="pushScheduleWrap" class="hidden">
+                            <label class="block text-[11px] font-bold text-gray-500 mb-1">排程時間（台灣時間）</label>
+                            <input type="datetime-local" id="pushScheduleAt" class="w-full p-3 border rounded-xl text-sm bg-white">
+                        </div>
+                        <button onclick="adminCreatePushJob()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-black text-sm shadow"><i class="fa fa-paper-plane"></i> 發布公告並發送推播</button>
+                        <div id="pushJobStatus" class="text-xs text-gray-500"></div>
+                    </div>
+                </div>
+
+                <div id="announcementList" class="space-y-3"><p class="text-center text-gray-400 text-xs py-8">正在載入公告...</p></div>
+            </section>
+
             <section id="history" class="tab-content bg-white p-4 rounded-2xl border min-h-[300px]">
                 <p class="text-gray-400 text-xs mb-2 px-1">💡 系統提示：僅顯示您個人的最新 30 筆歷史回報動態</p>
                 <div class="flex gap-2 mb-4">
@@ -206,6 +261,11 @@
                     <div>
                         <label class="block text-xs font-bold text-gray-500 mb-1">隸屬廳別（如需更改請洽管理員）</label>
                         <input id="myHallDisplay" type="text" class="w-full p-4 border rounded-xl text-sm bg-gray-100 text-gray-600 font-bold" readonly>
+                    </div>
+                    <div class="bg-blue-50 border border-blue-100 rounded-2xl p-4 text-left">
+                        <div class="font-bold text-sm text-blue-700 mb-1">🔔 網頁通知</div>
+                        <div id="fcmStatusText" class="text-xs text-gray-500 mb-3">尚未啟用通知</div>
+                        <button id="enablePushBtn" onclick="enableWebPush(true)" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold text-sm">開啟通知</button>
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-500 mb-1">主播自定義顯示暱稱</label>
@@ -234,6 +294,7 @@
                     </button>
                 </div>
 
+                
                 <div id="adminPrivateChatPanel" class="mb-6 bg-red-50 border border-red-200 rounded-2xl p-4"><div class="flex justify-between items-center mb-3"><h4 class="font-bold text-sm text-red-600"><i class="fa fa-comments"></i> 今日私聊開發進度</h4><span class="text-[10px] text-red-400 font-bold">目標：10 次私訊＋5 筆有效回覆</span></div><div id="adminPrivateChatStats" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-72 overflow-y-auto scroll-container"><p class="text-gray-400 text-center text-xs py-3 col-span-full">正在載入...</p></div></div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -283,6 +344,9 @@
         let globalRecordsForOptions = [];
         let globalPrivateChatRecords = [];
         let adminCurrentLimit = 20;
+        let messaging = null;
+        let fcmRegistration = null;
+        const FCM_VAPID_KEY = 'BOHJ_g6YChyWlXP45uFLzMsMC5SobhOFegas85cNOCDR38tNgXzPtJHH4pJWEdfpvfQT0DpHsXOm1KtM98Byvoo';
 
         // Firebase Config[span_0](start_span)[span_0](end_span)
         const firebaseConfig = {
@@ -356,6 +420,48 @@
             document.getElementById('regForm').classList.toggle('hidden', !isReg);
         };
 
+        function fcmKey(token){
+            try { return btoa(token).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+            catch(e){ return encodeURIComponent(token).replace(/[.#$\[\]]/g,'_'); }
+        }
+        function updateFcmStatus(text, enabled=false){
+            const el=document.getElementById('fcmStatusText'); if(el) el.innerText=text;
+            const btn=document.getElementById('enablePushBtn'); if(btn){ btn.innerText=enabled?'通知已啟用':'開啟通知'; btn.disabled=enabled; btn.classList.toggle('disabled-btn',enabled); }
+        }
+        function showFcmToast(title, body){
+            const box=document.getElementById('fcmToast'); if(!box)return;
+            document.getElementById('fcmToastTitle').innerText=title||'🔔 新通知';
+            document.getElementById('fcmToastBody').innerText=body||'';
+            box.classList.remove('hidden'); clearTimeout(window.__fcmToastTimer); window.__fcmToastTimer=setTimeout(()=>box.classList.add('hidden'),6000);
+        }
+        async function enableWebPush(showAlert=false){
+            if(!curUser || curUser.role==='admin' || curUser.role==='sub_admin') return;
+            if(!messaging){ if(showAlert) alert('目前瀏覽器無法啟用網頁通知，請使用最新版 Chrome / Edge / Safari，並確認網站為 HTTPS。'); return; }
+            if(!window.isSecureContext){ if(showAlert) alert('網頁推播需要 HTTPS 安全連線。請從正式網站網址開啟系統。'); return; }
+            try{
+                const permission=await Notification.requestPermission();
+                if(permission!=='granted'){ updateFcmStatus(permission==='denied'?'通知權限已拒絕，請到瀏覽器網站設定重新開啟':'尚未允許通知'); if(showAlert) alert(permission==='denied'?'你已拒絕通知，請到瀏覽器的網站通知設定重新允許。':'尚未允許通知。'); return; }
+                fcmRegistration=await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+                const token=await messaging.getToken({vapidKey:FCM_VAPID_KEY, serviceWorkerRegistration:fcmRegistration});
+                if(!token) throw new Error('未取得 FCM Token');
+                const key=fcmKey(token), now=Date.now();
+                await db.ref(`fcm_tokens/${curUser.acc}/${key}`).set({token,acc:curUser.acc,nick:curUser.nick,hall:curUser.hall,role:curUser.role,active:true,updatedAt:now});
+                await db.ref(`fcm_token_index/${key}`).set({token,acc:curUser.acc,nick:curUser.nick,hall:curUser.hall,active:true,updatedAt:now});
+                updateFcmStatus('通知已啟用，這台裝置可以接收系統提醒。',true);
+                if(showAlert) alert('🔔 網頁通知已開啟！');
+            }catch(e){ console.error('FCM啟用失敗',e); updateFcmStatus('通知啟用失敗，請確認 HTTPS、Service Worker 與瀏覽器權限。'); if(showAlert) alert('通知啟用失敗：'+(e.message||'請檢查網站 HTTPS 與 firebase-messaging-sw.js')); }
+        }
+        function initFcmForUser(){
+            if(!curUser || curUser.role==='admin' || curUser.role==='sub_admin') return;
+            if(!('Notification' in window) || !('serviceWorker' in navigator)){ updateFcmStatus('此瀏覽器不支援網頁通知'); return; }
+            if(Notification.permission==='granted') enableWebPush(false); else updateFcmStatus('尚未啟用通知，可在「個人中心」開啟。');
+            if(messaging){ messaging.onMessage(payload=>{ const n=payload.notification||{}; showFcmToast(n.title||'🔔 金好家族通知',n.body||''); }); }
+        }
+        async function deactivateCurrentFcmToken(){
+            // 登出不刪除 Token：使用者要求登出後仍可收到通知。
+            // 只有帳號被刪除時，管理端 deleteUser 會清除該帳號的 Token。
+        }
+
         document.getElementById('loginBtn').onclick = () => {
             if(!db) return alert('資料庫尚未連線，請重新整理頁面');
             const acc = document.getElementById('loginAcc').value.trim().toLowerCase();
@@ -424,7 +530,10 @@
                 }
                 
                 bindNavEvents(); 
-                loadAdminData(); loadUserList();  
+                loadAdminData(); loadUserList();
+                const composer=document.getElementById('announcementAdminComposer'); if(composer) composer.classList.remove('hidden');
+                getAllowedPushAudienceOptions();
+                loadAnnouncements();
             }
             initDateRange();
             bindPrivateChatListener();
@@ -929,7 +1038,7 @@
             db.ref(`users/${acc}/pwd`).set(trimmedPwd).then(() => { alert(`重設成功！已改為 ${trimmedPwd}`); });
         };
 
-        window.deleteUser = (acc) => { if(confirm(`確定除名 ${acc}？`)) db.ref('users/'+acc).remove(); };
+        window.deleteUser = async (acc) => { if(curUser?.role!=='admin') return alert('只有最高管理員可以除名成員'); if(!confirm(`確定除名 ${acc}？`)) return; try { await db.ref('users/'+acc).remove(); await db.ref('fcm_tokens/'+acc).remove(); const idx=await db.ref('fcm_token_index').once('value'); const updates={}; idx.forEach(c=>{ const v=c.val(); if(v && v.acc===acc) updates[c.key]=null; }); if(Object.keys(updates).length) await db.ref('fcm_token_index').update(updates); alert('成員已除名，該帳號的推播 Token 也已清除。'); } catch(e){ console.error(e); alert('除名失敗，請稍後再試。'); } };
         
         function loadAdminData() {
             db.ref('pending_users').on('value', snap => {
@@ -1000,9 +1109,79 @@
 
         window.submitPrivateChatReport=async()=>{if(!curUser||!db)return; const target=document.getElementById('privateTarget').value.trim(), status=document.getElementById('privateStatus').value, note=document.getElementById('privateNote').value.trim(); if(!target)return alert('請先填寫對象暱稱／識別名稱'); const today=getTodayKey(); const mine=globalPrivateChatRecords.filter(r=>r.user===curUser.acc&&r.date===today); const normalized=target.toLowerCase(); if(mine.some(r=>(r.target||'').trim().toLowerCase()===normalized))return alert('今天已經回報過這個對象，不能重複計算。'); const effective=mine.filter(r=>r.status==='effective').length; if(mine.length>=10&&effective>=5)return alert('今天的私聊任務已經完成，不需要再新增。'); if(status==='effective'&&effective>=5)return alert('今天的有效回覆已達 5 筆，這筆請改選其他尚未完成的項目。'); const now=new Date(); const payload={user:curUser.acc,nick:curUser.nick,hall:curUser.hall,target,status,note,date:today,time:now.toLocaleTimeString('zh-TW',{hour12:false}),timestamp:Date.now()}; try{await db.ref('private_chat_reports').push(payload); document.getElementById('privateTarget').value=''; document.getElementById('privateNote').value=''; alert('已成功記錄這次私聊開發！');}catch(e){console.error(e);alert('回報失敗，請稍後再試。');}};
 
-        function bindPrivateChatListener(){if(!db||!curUser)return; db.ref('private_chat_reports').on('value',snap=>{globalPrivateChatRecords=[]; snap.forEach(c=>{const v=c.val();v.key=c.key;globalPrivateChatRecords.push(v);}); renderPrivateTaskUI(); renderAdminPrivateChatStats();});}
+        function bindPrivateChatListener(){if(!db||!curUser)return; db.ref('private_chat_reports').on('value',snap=>{globalPrivateChatRecords=[]; snap.forEach(c=>{const v=c.val();v.key=c.key;globalPrivateChatRecords.push(v);}); renderPrivateTaskUI(); renderAdminPrivateChatStats(); loadAnnouncements();});}
 
         function renderAdminPrivateChatStats(){const box=document.getElementById('adminPrivateChatStats'); if(!box||!curUser||!db||(curUser.role!=='admin'&&curUser.role!=='sub_admin'))return; db.ref('users').once('value',snap=>{const today=getTodayKey(), users=[]; snap.forEach(c=>{const u=c.val();if(u.acc!=='admin'&&!(curUser.role==='sub_admin'&&u.hall!==curUser.hall))users.push(u);}); box.innerHTML=users.map(u=>{const rows=globalPrivateChatRecords.filter(r=>r.user===u.acc&&r.date===today), targets=new Set(rows.map(r=>(r.target||'').trim().toLowerCase()).filter(Boolean)), outreach=targets.size, effective=new Set(rows.filter(r=>r.status==='effective').map(r=>(r.target||'').trim().toLowerCase())).size, done=outreach>=10&&effective>=5, pct=Math.min(100,Math.round(Math.min(outreach/10,effective/5)*100)); return `<div class="bg-white border rounded-xl p-3"><div class="flex justify-between items-center"><span class="font-bold text-xs">${u.nick}</span><span class="text-[10px] font-bold ${done?'text-green-600':'text-red-500'}">${done?'已完成':'未完成'}</span></div><div class="text-[11px] text-gray-500 mt-1">私訊 ${Math.min(outreach,10)}/10　有效回覆 ${Math.min(effective,5)}/5</div><div class="h-1.5 bg-gray-100 rounded-full mt-2 overflow-hidden"><div class="h-full ${done?'bg-green-500':'bg-red-500'}" style="width:${pct}%"></div></div></div>`;}).join('')||'<p class="text-gray-400 text-center text-xs py-3 col-span-full">目前沒有成員</p>';});}
+
+        let selectedPushMembers = [];
+        window.toggleMobileMemberPicker=()=>{ const p=document.getElementById('pushMemberPicker'); if(p)p.classList.toggle('hidden'); };
+        function renderPushMemberPicker(arr){
+            const box=document.getElementById('pushMemberPicker'); if(!box)return;
+            box.innerHTML=arr.map(u=>{const checked=selectedPushMembers.includes(u.acc); return `<label class="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 cursor-pointer border-b last:border-b-0"><input type="checkbox" value="${u.acc}" ${checked?'checked':''} onchange="togglePushMember('${u.acc}', this.checked)" class="w-5 h-5"><span class="text-sm font-bold text-gray-700">${u.nick||u.acc}</span><span class="text-[10px] text-gray-400 ml-auto">${u.hall||'金好野'}</span></label>`;}).join('')||'<p class="text-gray-400 text-xs text-center py-4">目前沒有可指定的主播</p>';
+            const sum=document.getElementById('pushMemberSummary'); if(sum)sum.innerText=selectedPushMembers.length?`已選 ${selectedPushMembers.length} 位主播`:'點這裡選擇主播';
+        }
+        window.togglePushMember=(acc,checked)=>{ if(checked){if(!selectedPushMembers.includes(acc))selectedPushMembers.push(acc);}else{selectedPushMembers=selectedPushMembers.filter(x=>x!==acc);} renderPushMemberSummary(); };
+        function renderPushMemberSummary(){ const sum=document.getElementById('pushMemberSummary'); if(sum)sum.innerText=selectedPushMembers.length?`已選 ${selectedPushMembers.length} 位主播`:'點這裡選擇主播'; }
+
+        function getAllowedPushAudienceOptions(){
+            const sel=document.getElementById('pushAudience'); if(!sel||!curUser)return;
+            const isSub=curUser.role==='sub_admin';
+            if(isSub) sel.innerHTML=`<option value="own_hall">${curUser.hall||'金好野'}｜自己廳主播</option><option value="member">指定自己廳主播（可多選）</option>`;
+            else sel.innerHTML='<option value="all">全體已啟用通知成員</option><option value="金好野">金好野</option><option value="金好命">金好命</option><option value="member">指定主播（可多選）</option>';
+            togglePushMemberSelect();
+        }
+        window.togglePushMemberSelect=()=>{ const a=document.getElementById('pushAudience'), w=document.getElementById('pushMemberWrap'); if(w)w.classList.toggle('hidden',a?.value!=='member'); if(a?.value==='member') loadPushMembers(); else {selectedPushMembers=[]; renderPushMemberSummary();} };
+        window.togglePushSchedule=()=>{ const m=document.getElementById('pushSendMode')?.value, w=document.getElementById('pushScheduleWrap'); if(w)w.classList.toggle('hidden',m!=='schedule'); };
+        async function loadPushMembers(){
+            const box=document.getElementById('pushMemberPicker'); if(!box||!db)return;
+            const snap=await db.ref('users').once('value'); const arr=[];
+            snap.forEach(c=>{const u=c.val(); if(!u||!u.acc||u.acc==='admin'||u.role==='sub_admin')return; if(curUser.role==='sub_admin'&&u.hall!==curUser.hall)return; if(curUser.role==='admin'&&document.getElementById('pushAudience')?.value==='金好野'&&u.hall!=='金好野')return; if(curUser.role==='admin'&&document.getElementById('pushAudience')?.value==='金好命'&&u.hall!=='金好命')return; arr.push(u);});
+            arr.sort((a,b)=>(a.nick||a.acc).localeCompare(b.nick||b.acc,'zh-TW')); renderPushMemberPicker(arr);
+        }
+        
+        function loadPushJobs(){
+            getAllowedPushAudienceOptions();
+            const box=document.getElementById('pushJobsList'); if(!box||!db||!curUser||(curUser.role!=='admin'&&curUser.role!=='sub_admin'))return;
+            db.ref('push_jobs').orderByChild('createdAt').limitToLast(30).once('value').then(snap=>{
+                const rows=[]; snap.forEach(c=>{const v=c.val(); if(curUser.role==='sub_admin'&&v.createdByHall!==curUser.hall)return; rows.push({...v,key:c.key});}); rows.reverse();
+                box.innerHTML=rows.map(r=>{const st=r.status==='sent'?'已發送':r.status==='scheduled'?'排程中':r.status==='failed'?'失敗':r.status==='sending'?'發送中':'待發送'; const target=r.audience==='member'?`指定：${r.memberAcc||''}`:(r.audience==='all'?'全體':r.audience); return `<div class="bg-white border rounded-xl p-3 text-[11px]"><div class="flex justify-between gap-2"><b>${r.title||'未命名通知'}</b><span class="font-bold ${r.status==='sent'?'text-green-600':r.status==='failed'?'text-red-600':'text-blue-600'}">${st}</span></div><div class="text-gray-500 mt-1">${target}｜${r.body||''}</div><div class="text-gray-300 mt-1">${r.createdTime||''}${r.sendAt?`｜預計 ${r.sendAt}`:''}</div></div>`;}).join('')||'<p class="text-gray-400 text-xs">尚無推播紀錄</p>';
+            }).catch(e=>{box.innerHTML='<p class="text-red-500 text-xs">讀取推播紀錄失敗</p>';});
+        }
+        window.adminCreatePushJob=async()=>{
+            if(!curUser||!db||(curUser.role!=='admin'&&curUser.role!=='sub_admin'))return alert('只有管理員可以發布公告');
+            const audience=document.getElementById('pushAudience').value, selected=selectedPushMembers.slice();
+            const title=document.getElementById('pushTitle').value.trim(), body=document.getElementById('pushBody').value.trim(), mode=document.getElementById('pushSendMode').value, schedule=document.getElementById('pushScheduleAt').value;
+            if(!title||!body)return alert('請填寫公告標題與內容');
+            if(audience==='member'&&selected.length===0)return alert('請至少選擇一位主播');
+            if(mode==='schedule'&&!schedule)return alert('請選擇排程時間');
+            if(curUser.role==='sub_admin'&&!['own_hall','member'].includes(audience))return alert('次級廳長只能發送自己廳或指定自己廳主播');
+            let sendAt=Date.now(),status='queued',sendAtText='';
+            if(mode==='schedule'){const dt=new Date(schedule);if(isNaN(dt.getTime()))return alert('排程時間格式錯誤');if(dt.getTime()<=Date.now())return alert('排程時間必須晚於現在');sendAt=dt.getTime();status='scheduled';sendAtText=dt.toLocaleString('zh-TW',{hour12:false});}
+            const payload={audience,memberAccs:audience==='member'?selected:[],hall:audience==='own_hall'?curUser.hall:(['金好野','金好命'].includes(audience)?audience:null),title,body,sendAt,status,createdAt:Date.now(),createdBy:curUser.acc,createdByNick:curUser.nick,createdByHall:curUser.hall,createdTime:new Date().toLocaleString('zh-TW',{hour12:false}),sendAtText};
+            try{await db.ref('push_jobs').push(payload);document.getElementById('pushTitle').value='';document.getElementById('pushBody').value='';selectedPushMembers=[];renderPushMemberSummary();document.getElementById('pushMemberPicker').classList.add('hidden');document.getElementById('pushJobStatus').innerText=mode==='now'?'✅ 公告已發布，並已建立推播任務。':'🕒 公告排程已建立，發送後會出現在公告頁。';loadAnnouncements();}catch(e){console.error(e);alert('發布公告失敗：'+e.message);}
+        };
+        async function loadAnnouncements(){
+            const box=document.getElementById('announcementList'); if(!box||!db||!curUser)return;
+            try{
+                const snap=await db.ref('push_jobs').orderByChild('createdAt').limitToLast(100).once('value');
+                const now=Date.now(), rows=[];
+                snap.forEach(c=>{
+                    const r={...c.val(),key:c.key};
+                    if(r.status==='scheduled' && Number(r.sendAt)>now)return;
+                    if(r.status!=='sent' && r.status!=='queued' && Number(r.sendAt)>now)return;
+                    if(curUser.role==='admin'||curUser.role==='sub_admin'){}
+                    else if(r.audience==='all'){}
+                    else if(r.audience==='own_hall' || r.hall){ if((r.hall||r.createdByHall)!==curUser.hall)return; }
+                    else if(r.audience==='member'){ const list=Array.isArray(r.memberAccs)?r.memberAccs:(r.memberAcc?[r.memberAcc]:[]); if(!list.includes(curUser.acc))return; }
+                    else if(r.audience!==curUser.hall)return;
+                    rows.push(r);
+                });
+                rows.sort((a,b)=>(Number(b.sendAt||b.createdAt)-Number(a.sendAt||a.createdAt)));
+                box.innerHTML=rows.map(r=>`<article class="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm"><div class="flex justify-between gap-3 items-start"><div class="font-black text-gray-800 text-sm">${r.title||'家族公告'}</div><div class="text-[10px] text-gray-400 whitespace-nowrap">${r.sendAtText||r.createdTime||''}</div></div><div class="text-sm text-gray-600 mt-3 whitespace-pre-wrap leading-6">${r.body||''}</div><div class="text-[10px] text-gray-400 mt-3">發布：${r.createdByNick||r.createdBy||'管理員'}</div></article>`).join('')||'<div class="text-center text-gray-400 text-xs py-10">目前沒有可查看的公告</div>';
+            }catch(e){console.error(e); box.innerHTML='<p class="text-center text-red-500 text-xs py-8">公告載入失敗</p>'; }
+        }
+
+
 
         function bindNavEvents() {
             document.querySelectorAll('.nav-btn').forEach(btn => {

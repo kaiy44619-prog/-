@@ -1059,7 +1059,7 @@
         window.approve = (acc) => {
             db.ref('pending_users/'+acc).once('value', snap => {
                 const uData = snap.val();
-                uData.hall = curUser.role === 'sub_admin' ? curUser.hall : '金好野'; 
+                if (curUser.role === 'sub_admin') uData.hall = curUser.hall; else uData.hall = uData.hall || '金好野'; 
                 db.ref('users/'+acc).set(uData).then(() => db.ref('pending_users/'+acc).remove());
             });
         };
@@ -1158,7 +1158,7 @@
             let sendAt=Date.now(),status='queued',sendAtText='';
             if(mode==='schedule'){const dt=new Date(schedule);if(isNaN(dt.getTime()))return alert('排程時間格式錯誤');if(dt.getTime()<=Date.now())return alert('排程時間必須晚於現在');sendAt=dt.getTime();status='scheduled';sendAtText=dt.toLocaleString('zh-TW',{hour12:false});}
             const payload={audience,memberAccs:audience==='member'?selected:[],hall:audience==='own_hall'?curUser.hall:(['金好野','金好命'].includes(audience)?audience:null),title,body,sendAt,status,createdAt:Date.now(),createdBy:curUser.acc,createdByNick:curUser.nick,createdByHall:curUser.hall,createdTime:new Date().toLocaleString('zh-TW',{hour12:false}),sendAtText};
-            try{await db.ref('push_jobs').push(payload);document.getElementById('pushTitle').value='';document.getElementById('pushBody').value='';selectedPushMembers=[];renderPushMemberSummary();document.getElementById('pushMemberPicker').classList.add('hidden');document.getElementById('pushJobStatus').innerText=mode==='now'?'✅ 公告已發布，並已建立推播任務。':'🕒 公告排程已建立，發送後會出現在公告頁。';loadAnnouncements();}catch(e){console.error(e);alert('發布公告失敗：'+e.message);}
+            try{await db.ref('push_jobs').push(payload);document.getElementById('pushTitle').value='';document.getElementById('pushBody').value='';selectedPushMembers=[];renderPushMemberSummary();document.getElementById('pushMemberPicker').classList.add('hidden');document.getElementById('pushJobStatus').innerText=mode==='now'?'✅ 公告已發布，推播正在送出。':'🕒 公告排程已建立，時間到會自動發送並出現在公告頁。';loadAnnouncements();}catch(e){console.error(e);alert('發布公告失敗：'+e.message);}
         };
         async function loadAnnouncements(){
             const box=document.getElementById('announcementList'); if(!box||!db||!curUser)return;

@@ -54,6 +54,19 @@
                 <input id="regAcc" type="text" placeholder="設定登入帳號" class="w-full p-4 border rounded-2xl outline-none">
                 <input id="regNick" type="text" placeholder="顯示暱稱" class="w-full p-4 border rounded-2xl outline-none">
                 <input id="regPwd" type="password" placeholder="設定密碼" class="w-full p-4 border rounded-2xl outline-none">
+                <div>
+                    <div class="text-sm font-bold text-gray-700 mb-2">選擇所屬家族廳</div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="regHall" value="金好野" class="peer hidden" checked>
+                            <div class="p-4 rounded-2xl border-2 border-gray-200 text-center font-bold text-gray-600 peer-checked:border-blue-500 peer-checked:bg-blue-50 peer-checked:text-blue-600 transition">金好野</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="regHall" value="金好命" class="peer hidden">
+                            <div class="p-4 rounded-2xl border-2 border-gray-200 text-center font-bold text-gray-600 peer-checked:border-pink-500 peer-checked:bg-pink-50 peer-checked:text-pink-600 transition">金好命</div>
+                        </label>
+                    </div>
+                </div>
                 <button id="regBtn" class="w-full bg-green-500 text-white py-4 rounded-2xl font-bold shadow-lg active:scale-95 transition">提交註冊申請</button>
                 <p class="text-center text-sm text-gray-400 mt-4 cursor-pointer" onclick="toggleAuth(false)">返回登入</p>
             </div>
@@ -373,8 +386,10 @@
             const acc = document.getElementById('regAcc').value.trim().toLowerCase();
             const nick = document.getElementById('regNick').value.trim();
             const pwd = document.getElementById('regPwd').value.trim();
+            const hallEl = document.querySelector('input[name="regHall"]:checked');
+            const hall = hallEl ? hallEl.value : '金好野';
             if(!acc || !nick || !pwd) return alert('請填寫完整註冊資料');
-            db.ref('pending_users/'+acc).set({ acc, nick, pwd, hall: '金好野', role: 'user', timestamp: Date.now() }).then(() => { alert('已提交！請聯絡岳笙審核。'); toggleAuth(false); });
+            db.ref('pending_users/'+acc).set({ acc, nick, pwd, hall, role: 'user', timestamp: Date.now() }).then(() => { alert(`已提交！所屬家族：${hall}。請聯絡岳笙審核。`); toggleAuth(false); });
         };
 
         function loginOk(u) {

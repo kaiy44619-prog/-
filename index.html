@@ -4,16 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>金好家族管理系統</title>
-    <link rel="manifest" href="/-/manifest.json">
-    <meta name="theme-color" content="#2563eb">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="金好家族">
-    <meta name="mobile-web-app-capable" content="yes">
-    <link rel="apple-touch-icon" href="/-/icon-192.png">
-    <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-messaging-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-messaging-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
@@ -109,7 +102,7 @@
         <div id="fcmToast" class="hidden"><div class="fcm-toast-card"><div id="fcmToastTitle" class="font-black text-sm"></div><div id="fcmToastBody" class="text-xs text-gray-200 mt-1"></div></div></div>
 
         <div id="mainPage" class="hidden">
-            <div id="privateTaskAlert" class="hidden fixed top-3 right-3 z-[9999] w-auto max-w-[230px]">
+            <div id="privateTaskAlert" class="hidden fixed bottom-20 right-3 z-[9999] w-auto max-w-[230px]">
                 <div class="bg-red-600 text-white rounded-xl shadow-xl border border-red-300 p-2.5">
                     <div class="flex items-center gap-3">
                         <div class="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-sm flex-shrink-0"><i class="fa fa-bell"></i></div>
@@ -368,22 +361,6 @@
 
         firebase.initializeApp(firebaseConfig);
         db = firebase.database();
-
-        // Firebase Cloud Messaging 初始化
-        // 這一行不能省略，否則 messaging 會一直是 null，
-        // 「開啟通知」就會永遠被判定成瀏覽器不支援。
-        try {
-            if (typeof firebase.messaging === 'function') {
-                messaging = firebase.messaging();
-                console.log("Firebase Messaging 初始化成功");
-            } else {
-                console.warn("Firebase Messaging SDK 未載入");
-            }
-        } catch (e) {
-            console.error("Firebase Messaging 初始化失敗", e);
-            messaging = null;
-        }
-
         console.log("Firebase連線成功");
 
         const CLOUD_NAME = "dxfnvpflp";
@@ -457,27 +434,14 @@
             document.getElementById('fcmToastBody').innerText=body||'';
             box.classList.remove('hidden'); clearTimeout(window.__fcmToastTimer); window.__fcmToastTimer=setTimeout(()=>box.classList.add('hidden'),6000);
         }
-        function isIOSDevice(){ return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); }
-        function isStandalonePWA(){ return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true; }
-        function getFcmSupportMessage(){
-            if(!window.isSecureContext) return '目前不是 HTTPS 安全連線。';
-            if(!('Notification' in window)) return '目前瀏覽器不提供 Notification API。';
-            if(!('serviceWorker' in navigator)) return '目前瀏覽器不提供 Service Worker。';
-            if(typeof firebase.messaging !== 'function') return 'Firebase Messaging SDK 沒有成功載入。';
-            if(!messaging) return 'Firebase Messaging 尚未初始化。';
-            if(isIOSDevice()&&!isStandalonePWA()) return 'iPhone/iPad 請先加入主畫面，再從主畫面的金好家族圖示開啟。';
-            return '';
-        }
-
         async function enableWebPush(showAlert=false){
             if(!curUser || curUser.role==='admin' || curUser.role==='sub_admin') return;
-
-            const supportMessage=getFcmSupportMessage();
-            if(supportMessage){ updateFcmStatus(supportMessage); if(showAlert) alert(supportMessage); return; }
+            if(!messaging){ if(showAlert) alert('目前瀏覽器無法啟用網頁通知，請使用最新版 Chrome / Edge / Safari，並確認網站為 HTTPS。'); return; }
+            if(!window.isSecureContext){ if(showAlert) alert('網頁推播需要 HTTPS 安全連線。請從正式網站網址開啟系統。'); return; }
             try{
                 const permission=await Notification.requestPermission();
                 if(permission!=='granted'){ updateFcmStatus(permission==='denied'?'通知權限已拒絕，請到瀏覽器網站設定重新開啟':'尚未允許通知'); if(showAlert) alert(permission==='denied'?'你已拒絕通知，請到瀏覽器的網站通知設定重新允許。':'尚未允許通知。'); return; }
-                fcmRegistration=await navigator.serviceWorker.register(new URL('/-/firebase-messaging-sw.js', window.location.origin).toString(), {scope:'/-/'});
+                fcmRegistration=await navigator.serviceWorker.register('/firebase-messaging-sw.js');
                 const token=await messaging.getToken({vapidKey:FCM_VAPID_KEY, serviceWorkerRegistration:fcmRegistration});
                 if(!token) throw new Error('未取得 FCM Token');
                 const key=fcmKey(token), now=Date.now();
@@ -485,7 +449,7 @@
                 await db.ref(`fcm_token_index/${key}`).set({token,acc:curUser.acc,nick:curUser.nick,hall:curUser.hall,active:true,updatedAt:now});
                 updateFcmStatus('通知已啟用，這台裝置可以接收系統提醒。',true);
                 if(showAlert) alert('🔔 網頁通知已開啟！');
-            }catch(e){ console.error('FCM啟用失敗',e); updateFcmStatus('通知啟用失敗，請確認 HTTPS、Service Worker 與瀏覽器權限。'); if(showAlert) alert('通知啟用失敗：'+(e.code||'')+' '+(e.message||'請檢查 HTTPS、Service Worker、VAPID Key 與 iPhone 權限。')); }
+            }catch(e){ console.error('FCM啟用失敗',e); updateFcmStatus('通知啟用失敗，請確認 HTTPS、Service Worker 與瀏覽器權限。'); if(showAlert) alert('通知啟用失敗：'+(e.message||'請檢查網站 HTTPS 與 firebase-messaging-sw.js')); }
         }
         function initFcmForUser(){
             if(!curUser || curUser.role==='admin' || curUser.role==='sub_admin') return;
@@ -782,57 +746,45 @@
             document.getElementById('myTodayScheduleList').innerHTML = myTodayHtml || `<p class="text-gray-400 text-center col-span-full py-2 text-xs">當天尚未安排 any 排班數據</p>`;
         }
 
-        window.submitSchedule = async () => {
+        window.submitSchedule = () => {
             if(curUser.role === 'admin') return alert('最高管理員帳號僅供後台管理，請勿使用 admin 帳號進行排班。如需測試排班請另行註冊一般主播帳號。');
             const d = document.getElementById('dateInput').value;
             let t = document.getElementById('timeInput').value;
             if(!d || !t) return alert('請選擇日期與時段');
             if(t.includes('已額滿')) return alert('該時段已額滿');
             if(t.includes('已過時段')) return alert('該時段已過！');
+
             t = t.split('(')[0].trim();
             const inputDate = new Date(d + "T00:00:00");
-            const today = new Date(); today.setHours(0,0,0,0);
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            
             const diffDays = Math.ceil((inputDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-            if (diffDays < 0 || diffDays > 2) { alert("🚨 系統阻斷：本系統僅開放預約「今天、明天、後天」這3天內的時段！"); initDateRange(); return; }
+            if (diffDays < 0 || diffDays > 2) {
+                alert("🚨 系統阻斷：本系統僅開放預約「今天、明天、後天」這3天內的時段！");
+                initDateRange(); return;
+            }
+
             const targetDetail = `${d} ${t}`;
-            if(globalRecordsForOptions.some(r => r.user === curUser.acc && r.type === '預約排班' && (r.detail||'').split('(')[0].trim() === targetDetail)) return alert('🚨 提示：您已經登記過此時段了！');
-            const safeHall = curUser.hall || '金好野';
-            const slotKey = t.replace(/[.#$\[\]/]/g, '_').replace(/\s+/g, '_');
-            const existingCount = globalRecordsForOptions.filter(r => {
-                if(r.type !== '預約排班' || r.hall !== safeHall || !r.detail) return false;
-                const raw=(r.detail||'').split('(')[0].trim();
-                return raw === targetDetail;
-            }).length;
-            const lockRef = db.ref(`schedule_slots/${d}/${safeHall}/${slotKey}`);
-            const recordRef = db.ref('attendance_records').push();
-            const reservation = {key:recordRef.key,user:curUser.acc,nick:curUser.nick,hall:safeHall,target:targetDetail,createdAt:Date.now()};
-            try {
-                const tx = await lockRef.transaction(current => {
-                    const state = current && typeof current === 'object' ? current : {};
-                    const members = state.members && typeof state.members === 'object' ? state.members : {};
-                    if(members[recordRef.key]) return state;
-                    if(existingCount + Object.keys(members).length >= 5) return;
-                    members[recordRef.key] = reservation;
-                    return {capacity:5,members};
-                });
-                if(!tx.committed) return alert('🚫 這個時段剛剛已被其他主播搶滿，請重新選擇時段。');
-                const updates = {};
-                updates[`attendance_records/${recordRef.key}`] = {user:curUser.acc,nick:curUser.nick,hall:safeHall,type:'預約排班',detail:targetDetail,timestamp:Date.now(),time:new Date().toLocaleString('zh-TW',{hour12:false}),scheduleSlot:slotKey,scheduleDate:d,scheduleLockKey:recordRef.key};
-                await db.ref().update(updates);
+            let isDuplicated = false;
+            globalRecordsForOptions.forEach(r => {
+                if(r.user === curUser.acc && r.type === '預約排班') {
+                    if(r.detail.split('(')[0].trim() === targetDetail) isDuplicated = true;
+                }
+            });
+
+            if(isDuplicated) alert(`🚨 提示：您已經登記過此時段了！`);
+            else sendRecord('預約排班', targetDetail).then(() => {
                 saveToLocalHistory(`預約排班(${targetDetail})`, false);
                 alert('成功送出！');
-            } catch(e) { console.error('排班送出失敗',e); try{await lockRef.child('members').child(recordRef.key).remove();}catch(_){} alert('排班送出失敗，請稍後再試。'); }
+            });
         };
 
-        window.cancelSchedule = async (key) => {
+        window.cancelSchedule = (key) => {
             const confirmMsg = curUser.role === 'admin' ? '確定要強行刪除該名成員的排班嗎？' : '確定要取消這個時段的排班嗎？';
-            if(!confirm(confirmMsg)) return;
-            try {
-                const snap=await db.ref('attendance_records/'+key).once('value'); const r=snap.val(); const updates={};
-                updates[`attendance_records/${key}`]=null;
-                if(r&&r.scheduleDate&&r.hall&&r.scheduleSlot) updates[`schedule_slots/${r.scheduleDate}/${r.hall}/${r.scheduleSlot}/members/${key}`]=null;
-                await db.ref().update(updates); alert('已成功移除排班');
-            } catch(e){console.error(e);alert('移除排班失敗，請稍後再試。');}
+            if(confirm(confirmMsg)) {
+                db.ref('attendance_records/' + key).remove().then(() => { alert('已成功移除排班'); });
+            }
         };
 
         window.adminDeleteRecord = (key, nick) => {
@@ -1107,7 +1059,7 @@
         window.approve = (acc) => {
             db.ref('pending_users/'+acc).once('value', snap => {
                 const uData = snap.val();
-                if (curUser.role === 'sub_admin') uData.hall = curUser.hall; else uData.hall = uData.hall || '金好野'; 
+                uData.hall = curUser.role === 'sub_admin' ? curUser.hall : '金好野'; 
                 db.ref('users/'+acc).set(uData).then(() => db.ref('pending_users/'+acc).remove());
             });
         };
@@ -1155,25 +1107,8 @@
 
         window.openPrivateChatTask=()=>{const btn=document.querySelector('.nav-btn[data-target="privateChatTab"]'); if(btn)btn.click(); window.scrollTo({top:0,behavior:'smooth'});};
 
-        window.submitPrivateChatReport=async()=>{
-            if(!curUser||!db)return;
-            const target=document.getElementById('privateTarget').value.trim(), status=document.getElementById('privateStatus').value, note=document.getElementById('privateNote').value.trim();
-            if(!target)return alert('請先填寫對象暱稱／識別名稱');
-            const today=getTodayKey(), normalized=target.toLowerCase();
-            const targetKey=btoa(unescape(encodeURIComponent(normalized))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'').slice(0,180);
-            const lockRef=db.ref(`private_chat_daily_index/${curUser.acc}/${today}/${targetKey}`), now=new Date();
-            try {
-                const mine=globalPrivateChatRecords.filter(r=>r.user===curUser.acc&&r.date===today), effective=mine.filter(r=>r.status==='effective').length;
-                if(mine.length>=10&&effective>=5)return alert('今天的私聊任務已經完成，不需要再新增。');
-                if(status==='effective'&&effective>=5)return alert('今天的有效回覆已達 5 筆，這筆請改選其他尚未完成的項目。');
-                const tx=await lockRef.transaction(current=>current||{target,createdAt:Date.now(),user:curUser.acc});
-                if(!tx.committed)return alert('今天已經回報過這個對象，不能重複計算。');
-                const reportRef=db.ref('private_chat_reports').push();
-                const payload={user:curUser.acc,nick:curUser.nick,hall:curUser.hall,target,status,note,date:today,time:now.toLocaleTimeString('zh-TW',{hour12:false}),timestamp:Date.now(),dailyIndexKey:targetKey};
-                try { await reportRef.set(payload); document.getElementById('privateTarget').value=''; document.getElementById('privateNote').value=''; alert('已成功記錄這次私聊開發！'); }
-                catch(e){await lockRef.remove();throw e;}
-            } catch(e){console.error(e);alert(e.message&&e.message.includes('permission')?'目前沒有資料寫入權限，請聯絡管理員。':'回報失敗，請稍後再試。');}
-        };
+        window.submitPrivateChatReport=async()=>{if(!curUser||!db)return; const target=document.getElementById('privateTarget').value.trim(), status=document.getElementById('privateStatus').value, note=document.getElementById('privateNote').value.trim(); if(!target)return alert('請先填寫對象暱稱／識別名稱'); const today=getTodayKey(); const mine=globalPrivateChatRecords.filter(r=>r.user===curUser.acc&&r.date===today); const normalized=target.toLowerCase(); if(mine.some(r=>(r.target||'').trim().toLowerCase()===normalized))return alert('今天已經回報過這個對象，不能重複計算。'); const effective=mine.filter(r=>r.status==='effective').length; if(mine.length>=10&&effective>=5)return alert('今天的私聊任務已經完成，不需要再新增。'); if(status==='effective'&&effective>=5)return alert('今天的有效回覆已達 5 筆，這筆請改選其他尚未完成的項目。'); const now=new Date(); const payload={user:curUser.acc,nick:curUser.nick,hall:curUser.hall,target,status,note,date:today,time:now.toLocaleTimeString('zh-TW',{hour12:false}),timestamp:Date.now()}; try{await db.ref('private_chat_reports').push(payload); document.getElementById('privateTarget').value=''; document.getElementById('privateNote').value=''; alert('已成功記錄這次私聊開發！');}catch(e){console.error(e);alert('回報失敗，請稍後再試。');}};
+
         function bindPrivateChatListener(){if(!db||!curUser)return; db.ref('private_chat_reports').on('value',snap=>{globalPrivateChatRecords=[]; snap.forEach(c=>{const v=c.val();v.key=c.key;globalPrivateChatRecords.push(v);}); renderPrivateTaskUI(); renderAdminPrivateChatStats(); loadAnnouncements();});}
 
         function renderAdminPrivateChatStats(){const box=document.getElementById('adminPrivateChatStats'); if(!box||!curUser||!db||(curUser.role!=='admin'&&curUser.role!=='sub_admin'))return; db.ref('users').once('value',snap=>{const today=getTodayKey(), users=[]; snap.forEach(c=>{const u=c.val();if(u.acc!=='admin'&&!(curUser.role==='sub_admin'&&u.hall!==curUser.hall))users.push(u);}); box.innerHTML=users.map(u=>{const rows=globalPrivateChatRecords.filter(r=>r.user===u.acc&&r.date===today), targets=new Set(rows.map(r=>(r.target||'').trim().toLowerCase()).filter(Boolean)), outreach=targets.size, effective=new Set(rows.filter(r=>r.status==='effective').map(r=>(r.target||'').trim().toLowerCase())).size, done=outreach>=10&&effective>=5, pct=Math.min(100,Math.round(Math.min(outreach/10,effective/5)*100)); return `<div class="bg-white border rounded-xl p-3"><div class="flex justify-between items-center"><span class="font-bold text-xs">${u.nick}</span><span class="text-[10px] font-bold ${done?'text-green-600':'text-red-500'}">${done?'已完成':'未完成'}</span></div><div class="text-[11px] text-gray-500 mt-1">私訊 ${Math.min(outreach,10)}/10　有效回覆 ${Math.min(effective,5)}/5</div><div class="h-1.5 bg-gray-100 rounded-full mt-2 overflow-hidden"><div class="h-full ${done?'bg-green-500':'bg-red-500'}" style="width:${pct}%"></div></div></div>`;}).join('')||'<p class="text-gray-400 text-center text-xs py-3 col-span-full">目前沒有成員</p>';});}
@@ -1223,7 +1158,7 @@
             let sendAt=Date.now(),status='queued',sendAtText='';
             if(mode==='schedule'){const dt=new Date(schedule);if(isNaN(dt.getTime()))return alert('排程時間格式錯誤');if(dt.getTime()<=Date.now())return alert('排程時間必須晚於現在');sendAt=dt.getTime();status='scheduled';sendAtText=dt.toLocaleString('zh-TW',{hour12:false});}
             const payload={audience,memberAccs:audience==='member'?selected:[],hall:audience==='own_hall'?curUser.hall:(['金好野','金好命'].includes(audience)?audience:null),title,body,sendAt,status,createdAt:Date.now(),createdBy:curUser.acc,createdByNick:curUser.nick,createdByHall:curUser.hall,createdTime:new Date().toLocaleString('zh-TW',{hour12:false}),sendAtText};
-            try{await db.ref('push_jobs').push(payload);document.getElementById('pushTitle').value='';document.getElementById('pushBody').value='';selectedPushMembers=[];renderPushMemberSummary();document.getElementById('pushMemberPicker').classList.add('hidden');document.getElementById('pushJobStatus').innerText=mode==='now'?'✅ 公告已發布，推播正在送出。':'🕒 公告排程已建立，時間到會自動發送並出現在公告頁。';loadAnnouncements();}catch(e){console.error(e);alert('發布公告失敗：'+e.message);}
+            try{await db.ref('push_jobs').push(payload);document.getElementById('pushTitle').value='';document.getElementById('pushBody').value='';selectedPushMembers=[];renderPushMemberSummary();document.getElementById('pushMemberPicker').classList.add('hidden');document.getElementById('pushJobStatus').innerText=mode==='now'?'✅ 公告已發布，並已建立推播任務。':'🕒 公告排程已建立，發送後會出現在公告頁。';loadAnnouncements();}catch(e){console.error(e);alert('發布公告失敗：'+e.message);}
         };
         async function loadAnnouncements(){
             const box=document.getElementById('announcementList'); if(!box||!db||!curUser)return;

@@ -361,6 +361,22 @@
 
         firebase.initializeApp(firebaseConfig);
         db = firebase.database();
+
+        // Firebase Cloud Messaging 初始化
+        // 這一行不能省略，否則 messaging 會一直是 null，
+        // 「開啟通知」就會永遠被判定成瀏覽器不支援。
+        try {
+            if (typeof firebase.messaging === 'function') {
+                messaging = firebase.messaging();
+                console.log("Firebase Messaging 初始化成功");
+            } else {
+                console.warn("Firebase Messaging SDK 未載入");
+            }
+        } catch (e) {
+            console.error("Firebase Messaging 初始化失敗", e);
+            messaging = null;
+        }
+
         console.log("Firebase連線成功");
 
         const CLOUD_NAME = "dxfnvpflp";
@@ -436,7 +452,10 @@
         }
         async function enableWebPush(showAlert=false){
             if(!curUser || curUser.role==='admin' || curUser.role==='sub_admin') return;
-            if(!messaging){ if(showAlert) alert('目前瀏覽器無法啟用網頁通知，請使用最新版 Chrome / Edge / Safari，並確認網站為 HTTPS。'); return; }
+            if(!messaging){
+                if(showAlert) alert('Firebase 網頁推播模組尚未載入。請重新整理頁面；如果仍然無法開啟，請確認 firebase-messaging-compat.js 已載入。');
+                return;
+            }
             if(!window.isSecureContext){ if(showAlert) alert('網頁推播需要 HTTPS 安全連線。請從正式網站網址開啟系統。'); return; }
             try{
                 const permission=await Notification.requestPermission();

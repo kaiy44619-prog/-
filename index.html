@@ -441,7 +441,7 @@
             try{
                 const permission=await Notification.requestPermission();
                 if(permission!=='granted'){ updateFcmStatus(permission==='denied'?'通知權限已拒絕，請到瀏覽器網站設定重新開啟':'尚未允許通知'); if(showAlert) alert(permission==='denied'?'你已拒絕通知，請到瀏覽器的網站通知設定重新允許。':'尚未允許通知。'); return; }
-                fcmRegistration=await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+                fcmRegistration=await navigator.serviceWorker.register(new URL('/-/firebase-messaging-sw.js', window.location.origin).toString(), {scope:'/-/'});
                 const token=await messaging.getToken({vapidKey:FCM_VAPID_KEY, serviceWorkerRegistration:fcmRegistration});
                 if(!token) throw new Error('未取得 FCM Token');
                 const key=fcmKey(token), now=Date.now();
@@ -451,11 +451,87 @@
                 if(showAlert) alert('🔔 網頁通知已開啟！');
             }catch(e){ console.error('FCM啟用失敗',e); updateFcmStatus('通知啟用失敗，請確認 HTTPS、Service Worker 與瀏覽器權限。'); if(showAlert) alert('通知啟用失敗：'+(e.message||'請檢查網站 HTTPS 與 firebase-messaging-sw.js')); }
         }
-        function initFcmForUser(){
+        let fcmOnMessageBound = false;
+
+        async function initFcmForUser(){
             if(!curUser || curUser.role==='admin' || curUser.role==='sub_admin') return;
-            if(!('Notification' in window) || !('serviceWorker' in navigator)){ updateFcmStatus('此瀏覽器不支援網頁通知'); return; }
-            if(Notification.permission==='granted') enableWebPush(false); else updateFcmStatus('尚未啟用通知，可在「個人中心」開啟。');
-            if(messaging){ messaging.onMessage(payload=>{ const n=payload.notification||{}; showFcmToast(n.title||'🔔 金好家族通知',n.body||''); }); }
+
+            if(!('Notification' in window) || !('serviceWorker' in navigator)){
+                updateFcmStatus('此瀏覽器不支援網頁通知');
+                return;
+            }
+
+            try{
+                // 已經允許通知時，直接取得「目前這台裝置」的 FCM Token。
+                // 不再只看帳號底下是否存在其他裝置的 Token。
+                if(Notification.permission === 'granted'){
+                    if(!messaging){
+                        updateFcmStatus('通知功能尚未完成初始化，請重新整理後再試。');
+                    }else{
+                        fcmRegistration = await navigator.serviceWorker.register(
+                            new URL('/-/firebase-messaging-sw.js', window.location.origin).toString(),
+                            {scope:'/-/'}
+                        );
+
+                        const currentToken = await messaging.getToken({
+                            vapidKey: FCM_VAPID_KEY,
+                            serviceWorkerRegistration: fcmRegistration
+                        });
+
+                        if(!currentToken) throw new Error('目前裝置未取得 FCM Token');
+
+                        const key = fcmKey(currentToken);
+                        const tokenSnap = await db.ref(`fcm_tokens/${curUser.acc}/${key}`).once('value');
+                        const tokenData = tokenSnap.val();
+
+                        // 目前這台裝置已註冊：直接顯示已啟用。
+                        if(tokenData && tokenData.active === true){
+                            updateFcmStatus('通知已啟用，這台裝置可以接收系統提醒。', true);
+                        }else{
+                            // 瀏覽器權限已開，但這台裝置尚未寫入目前帳號，補登記一次。
+                            const now = Date.now();
+                            await db.ref(`fcm_tokens/${curUser.acc}/${key}`).set({
+                                token: currentToken,
+                                acc: curUser.acc,
+                                nick: curUser.nick,
+                                hall: curUser.hall,
+                                role: curUser.role,
+                                active: true,
+                                updatedAt: now
+                            });
+                            await db.ref(`fcm_token_index/${key}`).set({
+                                token: currentToken,
+                                acc: curUser.acc,
+                                nick: curUser.nick,
+                                hall: curUser.hall,
+                                active: true,
+                                updatedAt: now
+                            });
+                            updateFcmStatus('通知已啟用，這台裝置可以接收系統提醒。', true);
+                        }
+                    }
+                }else if(Notification.permission === 'denied'){
+                    updateFcmStatus('通知權限已拒絕，請到瀏覽器網站設定重新開啟。');
+                }else{
+                    updateFcmStatus('尚未啟用通知，可在「個人中心」開啟。');
+                }
+            }catch(e){
+                console.error('FCM 登入狀態檢查失敗', e);
+                updateFcmStatus(
+                    Notification.permission === 'granted'
+                    ? '通知已允許，但目前裝置尚未完成推播註冊。請點「開啟通知」重新同步。'
+                    : '尚未啟用通知，可在「個人中心」開啟。'
+                );
+            }
+
+            // 避免每次重新登入都重複綁定 onMessage，造成同一則通知跳出多次。
+            if(messaging && !fcmOnMessageBound){
+                messaging.onMessage(payload=>{
+                    const n=payload.notification||{};
+                    showFcmToast(n.title||'🔔 金好家族通知',n.body||'');
+                });
+                fcmOnMessageBound = true;
+            }
         }
         async function deactivateCurrentFcmToken(){
             // 登出不刪除 Token：使用者要求登出後仍可收到通知。

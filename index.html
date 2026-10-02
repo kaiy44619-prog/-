@@ -361,6 +361,14 @@
 
         firebase.initializeApp(firebaseConfig);
         db = firebase.database();
+        // FCM 初始化：避免 messaging 一直維持 null，導致「開啟通知」被誤判成瀏覽器不支援。
+        try {
+            messaging = firebase.messaging();
+            console.log("Firebase Messaging 初始化成功");
+        } catch (e) {
+            messaging = null;
+            console.error("Firebase Messaging 初始化失敗", e);
+        }
         console.log("Firebase連線成功");
 
         const CLOUD_NAME = "dxfnvpflp";
@@ -436,7 +444,21 @@
         }
         async function enableWebPush(showAlert=false){
             if(!curUser || curUser.role==='admin' || curUser.role==='sub_admin') return;
-            if(!messaging){ if(showAlert) alert('目前瀏覽器無法啟用網頁通知，請使用最新版 Chrome / Edge / Safari，並確認網站為 HTTPS。'); return; }
+            // messaging 若初始化失敗，先重新嘗試一次，而不是直接把問題誤報成「瀏覽器不支援」。
+            if(!messaging){
+                try {
+                    if(typeof firebase !== 'undefined' && firebase.messaging){
+                        messaging = firebase.messaging();
+                    }
+                } catch(e) {
+                    console.error('Firebase Messaging 重試初始化失敗', e);
+                }
+            }
+            if(!messaging){
+                updateFcmStatus('通知功能尚未完成初始化，請重新整理後再試。');
+                if(showAlert) alert('通知功能尚未完成初始化，請重新整理後再試。');
+                return;
+            }
             if(!window.isSecureContext){ if(showAlert) alert('網頁推播需要 HTTPS 安全連線。請從正式網站網址開啟系統。'); return; }
             try{
                 const permission=await Notification.requestPermission();

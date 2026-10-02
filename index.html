@@ -262,11 +262,6 @@
                         <label class="block text-xs font-bold text-gray-500 mb-1">隸屬廳別（如需更改請洽管理員）</label>
                         <input id="myHallDisplay" type="text" class="w-full p-4 border rounded-xl text-sm bg-gray-100 text-gray-600 font-bold" readonly>
                     </div>
-                    <div class="bg-blue-50 border border-blue-100 rounded-2xl p-4 text-left">
-                        <div class="font-bold text-sm text-blue-700 mb-1">🔔 網頁通知</div>
-                        <div id="fcmStatusText" class="text-xs text-gray-500 mb-3">尚未啟用通知</div>
-                        <button id="enablePushBtn" onclick="enableWebPush(true)" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold text-sm">開啟通知</button>
-                    </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-500 mb-1">主播自定義顯示暱稱</label>
                         <input id="newNick" type="text" class="w-full p-4 border rounded-xl text-sm" placeholder="輸入新暱稱">
@@ -310,6 +305,24 @@
                     </div>
                     
                     <div class="md:col-span-2">
+                        <div id="adminManualCheckinPanel" class="mb-4 bg-amber-50 border border-amber-200 rounded-2xl p-4">
+                            <div class="flex justify-between items-center mb-3">
+                                <div><h4 class="font-bold text-sm text-amber-700"><i class="fa fa-pencil-square-o"></i> 管理員手動補卡</h4><p class="text-[10px] text-amber-500 mt-1">可直接替主播補登上班／下班打卡，不需要重新上傳截圖</p></div>
+                                <span class="text-[10px] font-bold text-amber-500">管理員專用</span>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                                <select id="manualCheckinUser" class="p-3 border rounded-xl text-xs bg-white"><option value="">選擇主播</option></select>
+                                <input type="date" id="manualCheckinDate" class="p-3 border rounded-xl text-xs bg-white">
+                                <select id="manualCheckinHour" class="p-3 border rounded-xl text-xs bg-white"></select>
+                                <select id="manualCheckinType" class="p-3 border rounded-xl text-xs bg-white"><option value="上班打卡">上班打卡</option><option value="下班打卡">下班打卡</option></select>
+                            </div>
+                            <div class="mt-2 flex gap-2">
+                                <input id="manualCheckinNote" type="text" maxlength="100" placeholder="補卡備註（選填，例如：忘記打卡）" class="flex-1 p-3 border rounded-xl text-xs bg-white">
+                                <button onclick="adminManualCheckin()" class="bg-amber-500 hover:bg-amber-600 text-white px-5 py-3 rounded-xl font-bold text-xs whitespace-nowrap"><i class="fa fa-check"></i> 立即補卡</button>
+                            </div>
+                            <div id="manualCheckinStatus" class="text-[10px] text-gray-400 mt-2"></div>
+                        </div>
+
                         <div class="bg-gray-50 p-4 rounded-2xl border border-gray-200 mb-4 space-y-3">
                             <span class="text-xs font-bold text-gray-600 block"><i class="fa fa-search"></i> 後台數據實時搜尋與高效過濾面板</span>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -345,6 +358,7 @@
         let globalPrivateChatRecords = [];
         let adminCurrentLimit = 20;
         let messaging = null;
+        let manualCheckinUsersBound = false;
         let fcmRegistration = null;
         const FCM_VAPID_KEY = 'BOHJ_g6YChyWlXP45uFLzMsMC5SobhOFegas85cNOCDR38tNgXzPtJHH4pJWEdfpvfQT0DpHsXOm1KtM98Byvoo';
 
@@ -361,6 +375,14 @@
 
         firebase.initializeApp(firebaseConfig);
         db = firebase.database();
+        // FCM 初始化：避免 messaging 一直維持 null，導致「開啟通知」被誤判成瀏覽器不支援。
+        try {
+            messaging = firebase.messaging();
+            console.log("Firebase Messaging 初始化成功");
+        } catch (e) {
+            messaging = null;
+            console.error("Firebase Messaging 初始化失敗", e);
+        }
         console.log("Firebase連線成功");
 
         const CLOUD_NAME = "dxfnvpflp";
@@ -436,7 +458,21 @@
         }
         async function enableWebPush(showAlert=false){
             if(!curUser || curUser.role==='admin' || curUser.role==='sub_admin') return;
-            if(!messaging){ if(showAlert) alert('目前瀏覽器無法啟用網頁通知，請使用最新版 Chrome / Edge / Safari，並確認網站為 HTTPS。'); return; }
+            // messaging 若初始化失敗，先重新嘗試一次，而不是直接把問題誤報成「瀏覽器不支援」。
+            if(!messaging){
+                try {
+                    if(typeof firebase !== 'undefined' && firebase.messaging){
+                        messaging = firebase.messaging();
+                    }
+                } catch(e) {
+                    console.error('Firebase Messaging 重試初始化失敗', e);
+                }
+            }
+            if(!messaging){
+                updateFcmStatus('通知功能尚未完成初始化，請重新整理後再試。');
+                if(showAlert) alert('通知功能尚未完成初始化，請重新整理後再試。');
+                return;
+            }
             if(!window.isSecureContext){ if(showAlert) alert('網頁推播需要 HTTPS 安全連線。請從正式網站網址開啟系統。'); return; }
             try{
                 const permission=await Notification.requestPermission();
@@ -606,8 +642,8 @@
                 }
                 
                 bindNavEvents(); 
-                loadAdminData(); loadUserList();
-                const composer=document.getElementById('announcementAdminComposer'); if(composer) composer.classList.toggle('hidden', curUser.role!=='admin' && curUser.role!=='sub_admin');
+                loadAdminData(); loadUserList(); loadManualCheckinUsers();
+                const composer=document.getElementById('announcementAdminComposer'); if(composer) composer.classList.remove('hidden');
                 getAllowedPushAudienceOptions();
                 loadAnnouncements();
             }
@@ -1236,6 +1272,69 @@
             const payload={audience,memberAccs:audience==='member'?selected:[],hall:audience==='own_hall'?curUser.hall:(['金好野','金好命'].includes(audience)?audience:null),title,body,sendAt,status,createdAt:Date.now(),createdBy:curUser.acc,createdByNick:curUser.nick,createdByHall:curUser.hall,createdTime:new Date().toLocaleString('zh-TW',{hour12:false}),sendAtText};
             try{await db.ref('push_jobs').push(payload);document.getElementById('pushTitle').value='';document.getElementById('pushBody').value='';selectedPushMembers=[];renderPushMemberSummary();document.getElementById('pushMemberPicker').classList.add('hidden');document.getElementById('pushJobStatus').innerText=mode==='now'?'✅ 公告已發布，並已建立推播任務。':'🕒 公告排程已建立，發送後會出現在公告頁。';loadAnnouncements();}catch(e){console.error(e);alert('發布公告失敗：'+e.message);}
         };
+        window.adminEditAnnouncement=async(key)=>{
+            if(!curUser||curUser.role!=='admin') return alert('只有最高管理員可以修改公告');
+            try{
+                const snap=await db.ref('push_jobs/'+key).once('value');
+                const r=snap.val(); if(!r) return alert('找不到這則公告');
+                const title=prompt('修改公告標題：',r.title||'');
+                if(title===null)return;
+                const body=prompt('修改公告內容：',r.body||'');
+                if(body===null)return;
+                if(!title.trim()||!body.trim())return alert('標題與內容不能留空');
+                await db.ref('push_jobs/'+key).update({title:title.trim(),body:body.trim(),updatedAt:Date.now(),updatedBy:curUser.acc,updatedByNick:curUser.nick});
+                alert('公告已更新！');
+                loadAnnouncements();
+                if(typeof loadPushJobs==='function')loadPushJobs();
+            }catch(e){console.error(e);alert('公告修改失敗：'+e.message);}
+        };
+
+        window.adminDeleteAnnouncement=async(key)=>{
+            if(!curUser||curUser.role!=='admin') return alert('只有最高管理員可以刪除公告');
+            if(!confirm('確定要永久刪除這則公告嗎？\n刪除後公告頁將不再顯示，排程中的推播任務也會一併移除。'))return;
+            try{await db.ref('push_jobs/'+key).remove();alert('公告已刪除！');loadAnnouncements();if(typeof loadPushJobs==='function')loadPushJobs();}catch(e){console.error(e);alert('公告刪除失敗：'+e.message);}
+        };
+
+        function initManualCheckinHours(){
+            const sel=document.getElementById('manualCheckinHour'); if(!sel||sel.options.length)return;
+            sel.innerHTML='';
+            for(let i=0;i<24;i++){const h=String(i).padStart(2,'0');const nh=String((i+1)%24).padStart(2,'0');sel.innerHTML+=`<option value="${h}:00">${h}:00 - ${nh}:00</option>`;}
+            const d=document.getElementById('manualCheckinDate'); if(d&&!d.value){const now=new Date();d.value=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;}
+        }
+
+        function loadManualCheckinUsers(){
+            if(!db||!curUser||(curUser.role!=='admin'&&curUser.role!=='sub_admin'))return;
+            const sel=document.getElementById('manualCheckinUser'); if(!sel)return;
+            db.ref('users').once('value').then(snap=>{
+                const users=[]; snap.forEach(c=>{const u=c.val();if(!u||u.acc==='admin')return;if(curUser.role==='sub_admin'&&u.hall!==curUser.hall)return;users.push(u);});
+                users.sort((a,b)=>(a.nick||'').localeCompare(b.nick||'','zh-Hant'));
+                sel.innerHTML='<option value="">選擇主播</option>'+users.map(u=>`<option value="${u.acc}">${u.nick||u.acc}｜${u.hall||'金好野'}</option>`).join('');
+                initManualCheckinHours();
+            }).catch(e=>console.error('手動補卡成員載入失敗',e));
+        }
+
+        window.adminManualCheckin=async()=>{
+            if(!curUser||!db||(curUser.role!=='admin'&&curUser.role!=='sub_admin'))return alert('只有管理員可以手動補卡');
+            const acc=document.getElementById('manualCheckinUser').value;
+            const date=document.getElementById('manualCheckinDate').value;
+            const hour=document.getElementById('manualCheckinHour').value;
+            const type=document.getElementById('manualCheckinType').value;
+            const note=document.getElementById('manualCheckinNote').value.trim();
+            if(!acc||!date||!hour||!type)return alert('請完整選擇主播、日期、時段與打卡類型');
+            const userSnap=await db.ref('users/'+acc).once('value'); const u=userSnap.val();
+            if(!u)return alert('找不到這位主播');
+            if(curUser.role==='sub_admin'&&u.hall!==curUser.hall)return alert('只能替自己廳的主播補卡');
+            const targetTime=`${date.replace(/-/g,'/')} ${hour}`;
+            const sameHour=globalRecordsForOptions.some(r=>r.user===acc&&r.type===type&&r.time===targetTime);
+            if(sameHour)return alert(`這位主播在 ${targetTime} 已經有${type}紀錄，不能重複補卡。`);
+            const detail=`（管理員手動補卡）${note?`備註：${note}`:'無備註'}`;
+            try{
+                await db.ref('attendance_records').push({user:u.acc,nick:u.nick,hall:u.hall||'金好野',type,detail,timestamp:new Date(date+'T'+hour+':00').getTime(),time:targetTime,manual:true,manualBy:curUser.acc,manualByNick:curUser.nick});
+                document.getElementById('manualCheckinNote').value='';
+                alert(`已完成 ${u.nick}｜${targetTime}｜${type} 補卡！`);
+            }catch(e){console.error(e);alert('補卡失敗：'+e.message);}
+        };
+
         async function loadAnnouncements(){
             const box=document.getElementById('announcementList'); if(!box||!db||!curUser)return;
             try{
@@ -1243,8 +1342,11 @@
                 const now=Date.now(), rows=[];
                 snap.forEach(c=>{
                     const r={...c.val(),key:c.key};
-                    if(r.status==='scheduled' && Number(r.sendAt)>now)return;
-                    if(r.status!=='sent' && r.status!=='queued' && Number(r.sendAt)>now)return;
+                    // 最高管理員：公告／排程全部可見；其他成員只看已到發送時間的公告。
+                    if(curUser.role!=='admin'){
+                        if(r.status==='scheduled' && Number(r.sendAt)>now)return;
+                        if(r.status!=='sent' && r.status!=='queued' && Number(r.sendAt)>now)return;
+                    }
                     if(curUser.role==='admin'||curUser.role==='sub_admin'){}
                     else if(r.audience==='all'){}
                     else if(r.audience==='own_hall' || r.hall){ if((r.hall||r.createdByHall)!==curUser.hall)return; }
@@ -1253,7 +1355,10 @@
                     rows.push(r);
                 });
                 rows.sort((a,b)=>(Number(b.sendAt||b.createdAt)-Number(a.sendAt||a.createdAt)));
-                box.innerHTML=rows.map(r=>`<article class="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm"><div class="flex justify-between gap-3 items-start"><div class="font-black text-gray-800 text-sm">${r.title||'家族公告'}</div><div class="text-[10px] text-gray-400 whitespace-nowrap">${r.sendAtText||r.createdTime||''}</div></div><div class="text-sm text-gray-600 mt-3 whitespace-pre-wrap leading-6">${r.body||''}</div><div class="text-[10px] text-gray-400 mt-3">發布：${r.createdByNick||r.createdBy||'管理員'}</div></article>`).join('')||'<div class="text-center text-gray-400 text-xs py-10">目前沒有可查看的公告</div>';
+                box.innerHTML=rows.map(r=>{
+                    const adminActions = curUser.role==='admin' ? `<div class="flex gap-2 mt-3 pt-3 border-t border-gray-100"><button onclick="adminEditAnnouncement('${r.key}')" class="text-[11px] bg-blue-50 text-blue-600 border border-blue-200 px-3 py-1.5 rounded-lg font-bold"><i class="fa fa-pencil"></i> 編輯</button><button onclick="adminDeleteAnnouncement('${r.key}')" class="text-[11px] bg-red-50 text-red-600 border border-red-200 px-3 py-1.5 rounded-lg font-bold"><i class="fa fa-trash"></i> 刪除</button></div>` : '';
+                    return `<article class="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm"><div class="flex justify-between gap-3 items-start"><div class="font-black text-gray-800 text-sm">${r.title||'家族公告'}</div><div class="text-[10px] text-gray-400 whitespace-nowrap">${r.sendAtText||r.createdTime||''}</div></div><div class="text-sm text-gray-600 mt-3 whitespace-pre-wrap leading-6">${r.body||''}</div><div class="text-[10px] text-gray-400 mt-3">發布：${r.createdByNick||r.createdBy||'管理員'}</div>${adminActions}</article>`;
+                }).join('')||'<div class="text-center text-gray-400 text-xs py-10">目前沒有可查看的公告</div>';
             }catch(e){console.error(e); box.innerHTML='<p class="text-center text-red-500 text-xs py-8">公告載入失敗</p>'; }
         }
 

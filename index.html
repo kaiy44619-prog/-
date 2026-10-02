@@ -441,7 +441,7 @@
             try{
                 const permission=await Notification.requestPermission();
                 if(permission!=='granted'){ updateFcmStatus(permission==='denied'?'通知權限已拒絕，請到瀏覽器網站設定重新開啟':'尚未允許通知'); if(showAlert) alert(permission==='denied'?'你已拒絕通知，請到瀏覽器的網站通知設定重新允許。':'尚未允許通知。'); return; }
-                fcmRegistration=await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+                fcmRegistration=await navigator.serviceWorker.register('/-/firebase-messaging-sw.js');
                 const token=await messaging.getToken({vapidKey:FCM_VAPID_KEY, serviceWorkerRegistration:fcmRegistration});
                 if(!token) throw new Error('未取得 FCM Token');
                 const key=fcmKey(token), now=Date.now();

@@ -146,6 +146,23 @@
                     </label>
                 </div>
                 <div id="checkinBtnContainer" class="mb-6"></div>
+                <div id="adminManualCheckinPanel" class="hidden mb-4 bg-amber-50 border border-amber-200 rounded-2xl p-4">
+                            <div class="flex justify-between items-center mb-3">
+                                <div><h4 class="font-bold text-sm text-amber-700"><i class="fa fa-pencil-square-o"></i> 管理員手動補卡</h4><p class="text-[10px] text-amber-500 mt-1">可直接替主播補登上班／下班打卡，不需要重新上傳截圖</p></div>
+                                <span class="text-[10px] font-bold text-amber-500">管理員專用</span>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                                <select id="manualCheckinUser" class="p-3 border rounded-xl text-xs bg-white"><option value="">選擇主播</option></select>
+                                <input type="date" id="manualCheckinDate" class="p-3 border rounded-xl text-xs bg-white">
+                                <select id="manualCheckinHour" class="p-3 border rounded-xl text-xs bg-white"></select>
+                                <select id="manualCheckinType" class="p-3 border rounded-xl text-xs bg-white"><option value="上班打卡">上班打卡</option><option value="下班打卡">下班打卡</option></select>
+                            </div>
+                            <div class="mt-2 flex gap-2">
+                                <input id="manualCheckinNote" type="text" maxlength="100" placeholder="補卡備註（選填，例如：忘記打卡）" class="flex-1 p-3 border rounded-xl text-xs bg-white">
+                                <button onclick="adminManualCheckin()" class="bg-amber-500 hover:bg-amber-600 text-white px-5 py-3 rounded-xl font-bold text-xs whitespace-nowrap"><i class="fa fa-check"></i> 立即補卡</button>
+                            </div>
+                            <div id="manualCheckinStatus" class="text-[10px] text-gray-400 mt-2"></div>
+                        </div>
             </section>
 
             <section id="wingTab" class="tab-content bg-white p-6 rounded-2xl border max-w-xl mx-auto">
@@ -305,23 +322,7 @@
                     </div>
                     
                     <div class="md:col-span-2">
-                        <div id="adminManualCheckinPanel" class="mb-4 bg-amber-50 border border-amber-200 rounded-2xl p-4">
-                            <div class="flex justify-between items-center mb-3">
-                                <div><h4 class="font-bold text-sm text-amber-700"><i class="fa fa-pencil-square-o"></i> 管理員手動補卡</h4><p class="text-[10px] text-amber-500 mt-1">可直接替主播補登上班／下班打卡，不需要重新上傳截圖</p></div>
-                                <span class="text-[10px] font-bold text-amber-500">管理員專用</span>
-                            </div>
-                            <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
-                                <select id="manualCheckinUser" class="p-3 border rounded-xl text-xs bg-white"><option value="">選擇主播</option></select>
-                                <input type="date" id="manualCheckinDate" class="p-3 border rounded-xl text-xs bg-white">
-                                <select id="manualCheckinHour" class="p-3 border rounded-xl text-xs bg-white"></select>
-                                <select id="manualCheckinType" class="p-3 border rounded-xl text-xs bg-white"><option value="上班打卡">上班打卡</option><option value="下班打卡">下班打卡</option></select>
-                            </div>
-                            <div class="mt-2 flex gap-2">
-                                <input id="manualCheckinNote" type="text" maxlength="100" placeholder="補卡備註（選填，例如：忘記打卡）" class="flex-1 p-3 border rounded-xl text-xs bg-white">
-                                <button onclick="adminManualCheckin()" class="bg-amber-500 hover:bg-amber-600 text-white px-5 py-3 rounded-xl font-bold text-xs whitespace-nowrap"><i class="fa fa-check"></i> 立即補卡</button>
-                            </div>
-                            <div id="manualCheckinStatus" class="text-[10px] text-gray-400 mt-2"></div>
-                        </div>
+                        
 
                         <div class="bg-gray-50 p-4 rounded-2xl border border-gray-200 mb-4 space-y-3">
                             <span class="text-xs font-bold text-gray-600 block"><i class="fa fa-search"></i> 後台數據實時搜尋與高效過濾面板</span>
@@ -614,6 +615,8 @@
             curUser = u;
             document.getElementById('authPage').classList.add('hidden');
             document.getElementById('mainPage').classList.remove('hidden');
+            const manualCheckinPanel = document.getElementById('adminManualCheckinPanel');
+            if(manualCheckinPanel) manualCheckinPanel.classList.toggle('hidden', !(curUser.role === 'admin' || curUser.role === 'sub_admin'));
             
             document.getElementById('userHello').innerText = `${curUser.nick} [${curUser.hall}]`;
             if(document.getElementById('myHallDisplay')) document.getElementById('myHallDisplay').value = curUser.hall;
